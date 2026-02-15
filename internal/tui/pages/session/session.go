@@ -691,15 +691,7 @@ func buildAuthMethods(profile profiles.Profile, runtimePassword string) ([]sshli
 		password = runtimePassword
 	}
 	keyPassphrase := os.Getenv("ZET_SSH_KEY_PASSPHRASE")
-
-	addPassword := func() {
-		if strings.TrimSpace(password) == "" {
-			warnings = append(warnings, "password missing (set ZET_SSH_PASSWORD)")
-			return
-		}
-		methods = append(methods, ssh.PasswordAuth(password))
-		methods = append(methods, ssh.KeyboardInteractiveAuth(password))
-	}
+	passwordAdded := false
 
 	addAgent := func() {
 		agentAuth, err := ssh.AgentAuth()
@@ -712,7 +704,6 @@ func buildAuthMethods(profile profiles.Profile, runtimePassword string) ([]sshli
 
 	addProfileKey := func() {
 		if strings.TrimSpace(profile.KeyPath) == "" {
-			warnings = append(warnings, "profile key path not set")
 			return
 		}
 		auth, err := ssh.PublicKeyAuthFromFile(profile.KeyPath, []byte(keyPassphrase))
@@ -731,38 +722,22 @@ func buildAuthMethods(profile profiles.Profile, runtimePassword string) ([]sshli
 			}
 		}
 	}
+	// Always prioritize key-based auth first (profile key, local private keys, agent).
+	addProfileKey()
+	addDefaultKeys()
+	addAgent()
 
-	switch profile.AuthType {
-	case profiles.AuthPassword:
-		addPassword()
-		addAgent()
-		addDefaultKeys()
-	case profiles.AuthKey:
-		addProfileKey()
-		addDefaultKeys()
-		addAgent()
-		if strings.TrimSpace(password) != "" {
-			methods = append(methods, ssh.PasswordAuth(password))
-		}
-	case profiles.AuthAgent:
-		addAgent()
-		addDefaultKeys()
-		if strings.TrimSpace(password) != "" {
-			methods = append(methods, ssh.PasswordAuth(password))
-		}
-	default:
-		if strings.TrimSpace(profile.KeyPath) != "" {
-			addProfileKey()
-		}
-		addDefaultKeys()
-		addAgent()
-		if strings.TrimSpace(password) != "" {
-			methods = append(methods, ssh.PasswordAuth(password))
-		}
+	// Password fallback is always appended last.
+	if strings.TrimSpace(password) != "" {
+		methods = append(methods, ssh.PasswordAuth(password))
+		methods = append(methods, ssh.KeyboardInteractiveAuth(password))
+		passwordAdded = true
 	}
 
 	if len(methods) == 0 {
 		warnings = append(warnings, "no auth methods built")
+	} else if !passwordAdded {
+		warnings = append(warnings, "password fallback not set (prompt will appear on auth failure)")
 	}
 
 	return methods, warnings

@@ -6,6 +6,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -182,17 +184,41 @@ func DefaultPrivateKeyPaths() []string {
 		return nil
 	}
 
-	candidates := []string{
+	baseCandidates := []string{
 		filepath.Join(home, ".ssh", "id_ed25519"),
 		filepath.Join(home, ".ssh", "id_rsa"),
 		filepath.Join(home, ".ssh", "id_ecdsa"),
 		filepath.Join(home, ".ssh", "id_dsa"),
 	}
 
+	var candidates []string
+	candidates = append(candidates, baseCandidates...)
+
+	// Also discover custom id_* private keys (for keys with non-default names).
+	if matches, globErr := filepath.Glob(filepath.Join(home, ".ssh", "id_*")); globErr == nil {
+		sort.Strings(matches)
+		candidates = append(candidates, matches...)
+	}
+
+	seen := make(map[string]struct{})
 	var keys []string
-	for _, path := range candidates {
-		if info, statErr := os.Stat(path); statErr == nil && !info.IsDir() {
-			keys = append(keys, path)
+	for _, keyPath := range candidates {
+		if _, ok := seen[keyPath]; ok {
+			continue
+		}
+		seen[keyPath] = struct{}{}
+
+		if strings.HasSuffix(keyPath, ".pub") || strings.HasSuffix(keyPath, "-cert.pub") {
+			continue
+		}
+		base := filepath.Base(keyPath)
+		switch base {
+		case "known_hosts", "known_hosts.old", "config", "authorized_keys":
+			continue
+		}
+
+		if info, statErr := os.Stat(keyPath); statErr == nil && !info.IsDir() {
+			keys = append(keys, keyPath)
 		}
 	}
 	return keys
