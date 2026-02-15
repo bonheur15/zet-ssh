@@ -11,3 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Set up project structure for `zet-ssh` (Go + Bubble Tea).
 - Created `ARCHITECTURE.md` and Design Docs.
 - Established `internal/` package structure for TUI and Core logic.
+
+### ✨ Added
+- **Profile Core:** Implemented JSON-based profile storage and management.
+- **Vault Core:** Implemented secure encryption/decryption using Argon2id and ChaCha20-Poly1305.
+- **SSH Core:** Implemented SSH client wrapper with PTY support.
