@@ -44,3 +44,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Terminal Clear Handling:** Improved handling of clear-screen escape sequences to reduce viewport corruption after `clear`.
 - **Auth Retry UX:** When authentication fails, session now prompts for password and retries with password + keyboard-interactive auth methods.
 - **Auth Order:** Connection attempts now always try private keys first (profile key + discovered `~/.ssh/id_*` keys + agent), then password fallback.
+- **Profile Form Save Flow:** Fixed save reliability and added explicit separate actions for save-only vs save-and-connect in both create and edit forms.

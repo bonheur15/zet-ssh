@@ -24,6 +24,18 @@ type Form struct {
 	errMsg     string
 }
 
+type saveAction int
+
+const (
+	saveOnly saveAction = iota
+	saveAndConnect
+)
+
+type formSaveMsg struct {
+	profile profiles.Profile
+	connect bool
+}
+
 func NewForm() Form {
 	f := Form{}
 	f.initInputs()
@@ -84,7 +96,7 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 
 	var cmds []tea.Cmd
 
-	submit := func() (Form, tea.Cmd) {
+	submit := func(action saveAction) (Form, tea.Cmd) {
 		profile, err := f.buildProfile()
 		if err != nil {
 			f.errMsg = err.Error()
@@ -92,14 +104,21 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 		}
 		f.active = false
 		f.errMsg = ""
-		return f, func() tea.Msg { return profile }
+		return f, func() tea.Msg {
+			return formSaveMsg{
+				profile: profile,
+				connect: action == saveAndConnect,
+			}
+		}
 	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+s":
-			return submit()
+			return submit(saveOnly)
+		case "ctrl+g":
+			return submit(saveAndConnect)
 		case "tab", "shift+tab", "up", "down":
 			if msg.String() == "up" || msg.String() == "shift+tab" {
 				f.focusIndex--
@@ -115,7 +134,7 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 			cmds = append(cmds, f.updateFocus())
 		case "enter":
 			if f.focusIndex == 3 {
-				return submit()
+				return submit(saveOnly)
 			}
 			f.focusIndex++
 			if f.focusIndex > 3 {
@@ -221,6 +240,6 @@ func (f Form) View() string {
 		f.port.View(),
 		"",
 		errLine,
-		"(Ctrl+S or Enter on port to save, Esc to cancel)",
+		"(Ctrl+S save, Ctrl+G save & connect, Enter on port saves, Esc cancels)",
 	)
 }

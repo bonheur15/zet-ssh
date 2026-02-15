@@ -50,12 +50,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.form.errMsg = ""
 				return m, nil
 			}
-		case profiles.Profile:
-			if err := m.store.Upsert(msg); err != nil {
+		case formSaveMsg:
+			if err := m.store.Upsert(msg.profile); err != nil {
 				m.statusMsg = "Save failed: " + err.Error()
 				return m, nil
 			}
 			m.reloadItems()
+			m.selectProfileByID(msg.profile.ID)
+			if msg.connect {
+				m.statusMsg = "Profile saved and connecting..."
+				return m, func() tea.Msg {
+					return msg.profile
+				}
+			}
 			m.statusMsg = "Profile saved"
 			m.form.active = false
 			return m, nil
@@ -107,7 +114,7 @@ func (m Model) View() string {
 	if m.statusMsg != "" {
 		view = lipgloss.JoinVertical(lipgloss.Left, view, m.statusMsg)
 	}
-	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [enter] Connect")
+	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [enter] Connect  (in form: Ctrl+S save, Ctrl+G save+connect)")
 
 	return lipgloss.NewStyle().Margin(1, 2).Render(view)
 }
@@ -124,4 +131,15 @@ func (m *Model) reloadItems() {
 		items = append(items, item{profile: profiles.Profile{Name: "No Profiles", Host: "Add one to start"}})
 	}
 	m.list.SetItems(items)
+}
+
+func (m *Model) selectProfileByID(id string) {
+	items := m.list.Items()
+	for idx := range items {
+		it, ok := items[idx].(item)
+		if ok && it.profile.ID == id {
+			m.list.Select(idx)
+			return
+		}
+	}
 }
