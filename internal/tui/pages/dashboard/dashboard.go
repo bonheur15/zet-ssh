@@ -19,6 +19,7 @@ func (i item) FilterValue() string { return i.profile.Name + " " + i.profile.Hos
 type Model struct {
 	list  list.Model
 	store *profiles.Store
+	form  Form
 }
 
 func New(store *profiles.Store) Model {
@@ -30,7 +31,6 @@ func New(store *profiles.Store) Model {
 	}
 
 	if len(items) == 0 {
-		// Placeholder if empty
 		items = append(items, item{profile: profiles.Profile{Name: "No Profiles", Host: "Add one to start"}})
 	}
 
@@ -41,6 +41,7 @@ func New(store *profiles.Store) Model {
 	return Model{
 		list:  l,
 		store: store,
+		form:  NewForm(),
 	}
 }
 
@@ -49,20 +50,40 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if m.form.active {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			if msg.String() == "esc" {
+				m.form.active = false
+				return m, nil
+			}
+		case profiles.Profile:
+			m.form.active = false
+			m.store.Add(msg)
+			m.list.InsertItem(len(m.list.Items()), item{profile: msg})
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.form, cmd = m.form.Update(msg)
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		h, v := lipgloss.NewStyle().Margin(1, 2).GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
 	case tea.KeyMsg:
-		if msg.String() == "enter" {
+		switch msg.String() {
+		case "n":
+			m.form.active = true
+			return m, nil
+		case "enter":
 			if i, ok := m.list.SelectedItem().(item); ok {
 				return m, func() tea.Msg {
 					return i.profile
 				}
 			}
 		}
-	case profiles.Profile: // Signal to add/update profile (placeholder)
-		m.list.InsertItem(len(m.list.Items()), item{profile: msg})
 	}
 
 	var cmd tea.Cmd
@@ -71,5 +92,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	if m.form.active {
+		return lipgloss.Place(m.list.Width(), m.list.Height(),
+			lipgloss.Center, lipgloss.Center,
+			lipgloss.NewStyle().
+				BorderStyle(lipgloss.RoundedBorder()).
+				Padding(1).
+				Render(m.form.View()))
+	}
 	return lipgloss.NewStyle().Margin(1, 2).Render(m.list.View())
 }

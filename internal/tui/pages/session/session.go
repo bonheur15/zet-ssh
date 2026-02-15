@@ -2,7 +2,6 @@ package session
 
 import (
 	"fmt"
-	"io"
 	"zet-ssh/internal/core/profiles"
 	"zet-ssh/internal/core/ssh"
 

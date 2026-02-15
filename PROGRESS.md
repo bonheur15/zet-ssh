@@ -13,12 +13,14 @@
 - [x] SFTP Client Wrapper
 
 ## Phase 3: TUI Features 🎨
-- [ ] Dashboard / Profile List
+- [x] Dashboard / Profile List
+- [x] Command Palette
+- [x] Add Profile Form
+- [x] Vault Unlock UI
 - [ ] Terminal Emulator Integration
 - [ ] File Browser Pane
-- [ ] Vault Unlock UI
 
 ## Phase 4: Polish & Advanced Features ✨
-- [ ] Command Palette
 - [ ] Tunnel Builder
 - [ ] Theming & Styling
+- [ ] Transparent Command Log

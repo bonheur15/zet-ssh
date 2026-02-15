@@ -3,12 +3,9 @@ package ssh
 import (
 	"fmt"
 	"io"
-	"net"
-	"os"
 	"time"
 
 	"golang.org/x/crypto/ssh"
-	"golang.org/x/term"
 )
 
 type Session struct {

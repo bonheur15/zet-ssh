@@ -17,3 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Vault Core:** Implemented secure encryption/decryption using Argon2id and ChaCha20-Poly1305.
 - **SSH Core:** Implemented SSH client wrapper with PTY support.
 - **SFTP Core:** Implemented SFTP client wrapper for file operations.
+- **TUI Dashboard:** Improved list view with real profiles and "Add Profile" functionality.
+- **Command Palette:** Added `Ctrl+K` palette for quick actions.
+- **Vault UI:** Added secure master password prompt for vault unlocking.

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"zet-ssh/internal/core/profiles"
+	"zet-ssh/internal/tui/components"
 	"zet-ssh/internal/tui/pages/dashboard"
 	"zet-ssh/internal/tui/pages/session"
 
@@ -23,7 +24,10 @@ type AppModel struct {
 	state          sessionState
 	dashboard      tea.Model
 	session        tea.Model
+	palette        components.Palette
+	vaultUnlock    components.VaultUnlock
 	profilesStore  *profiles.Store
+	vaultPassword  string
 	width          int
 	height         int
 }
@@ -41,6 +45,8 @@ func NewAppModel() AppModel {
 	return AppModel{
 		state:         viewDashboard,
 		dashboard:     dashboard.New(store),
+		palette:       components.NewPalette(),
+		vaultUnlock:   components.NewVaultUnlock(),
 		profilesStore: store,
 	}
 }
@@ -53,9 +59,29 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
 
+	if m.vaultUnlock.IsActive() {
+		m.vaultUnlock, cmd = m.vaultUnlock.Update(msg)
+		return m, cmd
+	}
+
+	if m.palette.IsActive() {
+		m.palette, cmd = m.palette.Update(msg)
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
+	case components.VaultUnlockedMsg:
+		m.vaultPassword = msg.Password
+		// Here we could try to load the vault to verify password
+		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "ctrl+v":
+			m.vaultUnlock.Open()
+			return m, nil
+		case "ctrl+k":
+			m.palette.Toggle()
+			return m, nil
 		case "ctrl+c":
 			return m, tea.Quit
 		case "q":
@@ -104,14 +130,29 @@ func (m AppModel) View() string {
 		return "Initializing..."
 	}
 
+	var view string
 	switch m.state {
 	case viewDashboard:
-		return m.dashboard.View()
+		view = m.dashboard.View()
 	case viewSession:
-		return m.session.View()
+		view = m.session.View()
 	case viewSettings:
-		return "Settings"
+		view = "Settings"
 	default:
-		return "Unknown State"
+		view = "Unknown State"
 	}
+
+	if m.palette.IsActive() {
+		return lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			m.palette.View())
+	}
+
+	if m.vaultUnlock.IsActive() {
+		return lipgloss.Place(m.width, m.height,
+			lipgloss.Center, lipgloss.Center,
+			m.vaultUnlock.View())
+	}
+
+	return view
 }
