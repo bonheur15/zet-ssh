@@ -3,6 +3,7 @@ package sftp
 import (
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/pkg/sftp"
@@ -32,6 +33,10 @@ func (c *Client) Upload(localPath, remotePath string) error {
 	}
 	defer localFile.Close()
 
+	if err := c.sftpClient.MkdirAll(path.Dir(remotePath)); err != nil {
+		return err
+	}
+
 	remoteFile, err := c.sftpClient.Create(remotePath)
 	if err != nil {
 		return err
@@ -49,6 +54,10 @@ func (c *Client) Download(remotePath, localPath string) error {
 	}
 	defer remoteFile.Close()
 
+	if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+		return err
+	}
+
 	localFile, err := os.Create(localPath)
 	if err != nil {
 		return err
@@ -57,6 +66,26 @@ func (c *Client) Download(remotePath, localPath string) error {
 
 	_, err = io.Copy(localFile, remoteFile)
 	return err
+}
+
+func (c *Client) Mkdir(path string) error {
+	return c.sftpClient.Mkdir(path)
+}
+
+func (c *Client) Remove(path string) error {
+	return c.sftpClient.Remove(path)
+}
+
+func (c *Client) Stat(path string) (os.FileInfo, error) {
+	return c.sftpClient.Stat(path)
+}
+
+func (c *Client) PathSeparator() string {
+	return "/"
+}
+
+func (c *Client) Pwd() (string, error) {
+	return c.sftpClient.Getwd()
 }
 
 func (c *Client) Close() error {

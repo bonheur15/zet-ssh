@@ -1,9 +1,10 @@
 package components
 
 import (
+	"zet-ssh/internal/tui/theme"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type PaletteItem struct {
@@ -71,12 +72,9 @@ func (m Palette) View() string {
 		return ""
 	}
 
-	style := lipgloss.NewStyle().
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("62")).
-		Padding(1).
-		Background(lipgloss.Color("235"))
-
+	style := theme.Modal.Copy().
+		BorderForeground(theme.Primary).
+		Background(theme.Highlight)
 	return style.Render(m.list.View())
 }
 

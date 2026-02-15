@@ -1,6 +1,8 @@
 package components
 
 import (
+	"zet-ssh/internal/tui/theme"
+
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -62,12 +64,13 @@ func (m VaultUnlock) View() string {
 
 	style := lipgloss.NewStyle().
 		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("196")).
+		BorderForeground(theme.Error).
+		Background(theme.Highlight).
 		Padding(1).
 		Width(40)
 
 	content := lipgloss.JoinVertical(lipgloss.Center,
-		lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true).Render("VAULT LOCKED"),
+		lipgloss.NewStyle().Foreground(theme.Error).Bold(true).Render("VAULT LOCKED"),
 		"Please enter master password to unlock",
 		"",
 		m.password.View(),

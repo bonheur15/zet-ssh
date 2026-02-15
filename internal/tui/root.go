@@ -7,6 +7,7 @@ import (
 	"zet-ssh/internal/tui/components"
 	"zet-ssh/internal/tui/pages/dashboard"
 	"zet-ssh/internal/tui/pages/session"
+	"zet-ssh/internal/tui/theme"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -21,21 +22,22 @@ const (
 )
 
 type AppModel struct {
-	state          sessionState
-	dashboard      tea.Model
-	session        tea.Model
-	palette        components.Palette
-	vaultUnlock    components.VaultUnlock
-	profilesStore  *profiles.Store
-	vaultPassword  string
-	width          int
-	height         int
+	state         sessionState
+	dashboard     tea.Model
+	session       tea.Model
+	palette       components.Palette
+	vaultUnlock   components.VaultUnlock
+	profilesStore *profiles.Store
+	vaultPassword string
+	width         int
+	height        int
 }
 
 func NewAppModel() AppModel {
 	home, _ := os.UserHomeDir()
 	configDir := filepath.Join(home, ".config", "zet-ssh")
 	store, _ := profiles.NewStore(configDir)
+	_ = theme.Load(configDir)
 
 	if len(store.List()) == 0 {
 		store.Add(profiles.Profile{ID: "1", Name: "Local Machine", Host: "localhost", Port: 22, User: "user"})
@@ -87,6 +89,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "esc", "q":
 			if m.state == viewSession && !m.palette.IsActive() && !m.vaultUnlock.IsActive() {
+				if closer, ok := m.session.(interface{ Close() }); ok {
+					closer.Close()
+				}
 				m.state = viewDashboard
 				return m, nil
 			}

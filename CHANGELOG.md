@@ -24,3 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Advanced Auth:** Added support for Password and Public Key authentication in SSH core.
 - **File Browser:** Created a new TUI component for directory navigation.
 - **Tunnel Builder:** Added a dedicated UI page for managing SSH tunnels.
+- **Session File Mode:** Added dual-pane local/remote file browser mode in the SSH session view (`Ctrl+F`).
+- **Pane Transfers:** Added `c` copy action for file upload/download between local and remote panes.
+- **Theme Overrides:** Added support for custom Lip Gloss color overrides via `~/.config/zet-ssh/theme.json`.
+
+### Changed
+- **File Browser State:** Extended browser component with parent navigation, active pane highlighting, and stable path handling.
+- **SFTP Core:** Upload/download now create missing parent directories where needed.
+
+### Fixed
+- **SSH Auth Failure:** Session connect now builds real auth methods (agent, key files, optional env password) instead of trying with an empty auth list.
+- **Session Lifecycle:** Returning from session now closes SSH/SFTP resources.

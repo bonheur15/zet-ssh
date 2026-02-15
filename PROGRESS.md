@@ -23,6 +23,6 @@
 
 ## Phase 4: Polish & Advanced Features
 - [x] Tunnel Builder UI (Initial)
-- [ ] SFTP File Transfer Logic
-- [ ] Multi-Pane Workspace
-- [ ] Theming & Styling
+- [x] SFTP File Transfer Logic
+- [x] Multi-Pane Workspace (Local/Remote panes in session mode)
+- [x] Theming & Styling (`~/.config/zet-ssh/theme.json` overrides)

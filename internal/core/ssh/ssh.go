@@ -3,9 +3,13 @@ package ssh
 import (
 	"fmt"
 	"io"
+	"net"
+	"os"
+	"path/filepath"
 	"time"
 
 	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/agent"
 )
 
 type Session struct {
@@ -18,8 +22,8 @@ type Session struct {
 
 func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, error) {
 	config := &ssh.ClientConfig{
-		User: user,
-		Auth: auth,
+		User:            user,
+		Auth:            auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
@@ -105,6 +109,11 @@ func (s *Session) Resize(width, height int) error {
 	return s.session.WindowChange(height, width)
 }
 
+// Client returns the underlying SSH client for operations like SFTP.
+func (s *Session) Client() *ssh.Client {
+	return s.client
+}
+
 // PasswordAuth returns an auth method using the provided password.
 func PasswordAuth(pass string) ssh.AuthMethod {
 	return ssh.Password(pass)
@@ -126,4 +135,54 @@ func PublicKeyAuthWithPassphrase(keyData []byte, passphrase []byte) (ssh.AuthMet
 		return nil, err
 	}
 	return ssh.PublicKeys(signer), nil
+}
+
+// AgentAuth returns an auth method backed by SSH agent signers.
+func AgentAuth() (ssh.AuthMethod, error) {
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	if socket == "" {
+		return nil, fmt.Errorf("SSH_AUTH_SOCK is not set")
+	}
+
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		return nil, err
+	}
+
+	return ssh.PublicKeysCallback(agent.NewClient(conn).Signers), nil
+}
+
+// PublicKeyAuthFromFile loads an auth method from a private key file.
+func PublicKeyAuthFromFile(keyPath string, passphrase []byte) (ssh.AuthMethod, error) {
+	data, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, err
+	}
+	if len(passphrase) > 0 {
+		return PublicKeyAuthWithPassphrase(data, passphrase)
+	}
+	return PublicKeyAuth(data)
+}
+
+// DefaultPrivateKeyPaths returns common key file paths if they exist.
+func DefaultPrivateKeyPaths() []string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+
+	candidates := []string{
+		filepath.Join(home, ".ssh", "id_ed25519"),
+		filepath.Join(home, ".ssh", "id_rsa"),
+		filepath.Join(home, ".ssh", "id_ecdsa"),
+		filepath.Join(home, ".ssh", "id_dsa"),
+	}
+
+	var keys []string
+	for _, path := range candidates {
+		if info, statErr := os.Stat(path); statErr == nil && !info.IsDir() {
+			keys = append(keys, path)
+		}
+	}
+	return keys
 }
