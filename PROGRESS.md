@@ -17,7 +17,7 @@
 - [x] Command Palette
 - [x] Add Profile Form
 - [x] Vault Unlock UI
-- [ ] Terminal Emulator Integration
+- [/] Terminal Emulator Integration (Basic I/O Bridge)
 - [ ] File Browser Pane
 
 ## Phase 4: Polish & Advanced Features ✨

@@ -76,20 +76,23 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+v":
-			m.vaultUnlock.Open()
-			return m, nil
 		case "ctrl+k":
-			m.palette.Toggle()
+			if !m.vaultUnlock.IsActive() {
+				m.palette.Toggle()
+			}
 			return m, nil
 		case "ctrl+c":
-			return m, tea.Quit
-		case "q":
-			if m.state == viewSession {
+			if m.state != viewSession {
+				return m, tea.Quit
+			}
+		case "esc", "q":
+			if m.state == viewSession && !m.palette.IsActive() && !m.vaultUnlock.IsActive() {
 				m.state = viewDashboard
 				return m, nil
 			}
-			return m, tea.Quit
+			if !m.palette.IsActive() && !m.vaultUnlock.IsActive() && m.state == viewDashboard {
+				return m, tea.Quit
+			}
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width

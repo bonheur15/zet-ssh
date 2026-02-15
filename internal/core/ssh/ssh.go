@@ -11,13 +11,16 @@ import (
 type Session struct {
 	client  *ssh.Client
 	session *ssh.Session
+	stdin   io.WriteCloser
+	stdout  io.Reader
+	stderr  io.Reader
 }
 
 func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, error) {
 	config := &ssh.ClientConfig{
 		User: user,
 		Auth: auth,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: Implement proper host key management
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         10 * time.Second,
 	}
 
@@ -33,13 +36,37 @@ func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, erro
 		return nil, err
 	}
 
+	stdin, err := session.StdinPipe()
+	if err != nil {
+		session.Close()
+		client.Close()
+		return nil, err
+	}
+
+	stdout, err := session.StdoutPipe()
+	if err != nil {
+		session.Close()
+		client.Close()
+		return nil, err
+	}
+
+	stderr, err := session.StderrPipe()
+	if err != nil {
+		session.Close()
+		client.Close()
+		return nil, err
+	}
+
 	return &Session{
 		client:  client,
 		session: session,
+		stdin:   stdin,
+		stdout:  stdout,
+		stderr:  stderr,
 	}, nil
 }
 
-func (s *Session) StartShell(stdin io.Reader, stdout, stderr io.Writer, width, height int) error {
+func (s *Session) StartShell(width, height int) error {
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1,
 		ssh.TTY_OP_ISPEED: 14400,
@@ -50,15 +77,19 @@ func (s *Session) StartShell(stdin io.Reader, stdout, stderr io.Writer, width, h
 		return err
 	}
 
-	s.session.Stdin = stdin
-	s.session.Stdout = stdout
-	s.session.Stderr = stderr
-
 	if err := s.session.Shell(); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func (s *Session) Write(p []byte) (n int, err error) {
+	return s.stdin.Write(p)
+}
+
+func (s *Session) Read(p []byte) (n int, err error) {
+	return s.stdout.Read(p)
 }
 
 func (s *Session) Wait() error {
