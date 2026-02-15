@@ -16,3 +16,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Profile Core:** Implemented JSON-based profile storage and management.
 - **Vault Core:** Implemented secure encryption/decryption using Argon2id and ChaCha20-Poly1305.
 - **SSH Core:** Implemented SSH client wrapper with PTY support.
+- **SFTP Core:** Implemented SFTP client wrapper for file operations.

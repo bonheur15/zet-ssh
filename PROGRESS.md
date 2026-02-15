@@ -10,7 +10,7 @@
 - [x] Profile Manager (CRUD + JSON Persistence)
 - [x] Vault (Encryption/Decryption)
 - [x] SSH Client Wrapper
-- [ ] SFTP Client Wrapper
+- [x] SFTP Client Wrapper
 
 ## Phase 3: TUI Features 🎨
 - [ ] Dashboard / Profile List

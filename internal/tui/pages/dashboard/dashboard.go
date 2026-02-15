@@ -1,35 +1,47 @@
 package dashboard
 
 import (
+	"zet-ssh/internal/core/profiles"
+
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
 type item struct {
-	title, desc string
+	profile profiles.Profile
 }
 
-func (i item) Title() string       { return i.title }
-func (i item) Description() string { return i.desc }
-func (i item) FilterValue() string { return i.title }
+func (i item) Title() string       { return i.profile.Name }
+func (i item) Description() string { return i.profile.User + "@" + i.profile.Host }
+func (i item) FilterValue() string { return i.profile.Name + " " + i.profile.Host }
 
 type Model struct {
-	list list.Model
+	list  list.Model
+	store *profiles.Store
 }
 
-func New() Model {
-	items := []list.Item{
-		item{title: "Production DB", desc: "192.168.1.10 - PostgreSQL"},
-		item{title: "Staging API", desc: "10.0.0.5 - Docker Swarm"},
-		item{title: "Local Dev", desc: "localhost:2222 - Vagrant"},
+func New(store *profiles.Store) Model {
+	var items []list.Item
+	if store != nil {
+		for _, p := range store.List() {
+			items = append(items, item{profile: p})
+		}
+	}
+
+	if len(items) == 0 {
+		// Placeholder if empty
+		items = append(items, item{profile: profiles.Profile{Name: "No Profiles", Host: "Add one to start"}})
 	}
 
 	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
-	l.Title = "SSH Profiles"
-	l.SetShowHelp(false)
+	l.Title = "Zet-SSH | Connections"
+	l.SetShowHelp(true)
 
-	return Model{list: l}
+	return Model{
+		list:  l,
+		store: store,
+	}
 }
 
 func (m Model) Init() tea.Cmd {
@@ -41,6 +53,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		h, v := lipgloss.NewStyle().Margin(1, 2).GetFrameSize()
 		m.list.SetSize(msg.Width-h, msg.Height-v)
+	case tea.KeyMsg:
+		if msg.String() == "enter" {
+			if i, ok := m.list.SelectedItem().(item); ok {
+				return m, func() tea.Msg {
+					return i.profile
+				}
+			}
+		}
+	case profiles.Profile: // Signal to add/update profile (placeholder)
+		m.list.InsertItem(len(m.list.Items()), item{profile: msg})
 	}
 
 	var cmd tea.Cmd
