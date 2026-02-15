@@ -17,32 +17,24 @@ func (i item) Description() string { return i.profile.User + "@" + i.profile.Hos
 func (i item) FilterValue() string { return i.profile.Name + " " + i.profile.Host }
 
 type Model struct {
-	list  list.Model
-	store *profiles.Store
-	form  Form
+	list      list.Model
+	store     *profiles.Store
+	form      Form
+	statusMsg string
 }
 
 func New(store *profiles.Store) Model {
-	var items []list.Item
-	if store != nil {
-		for _, p := range store.List() {
-			items = append(items, item{profile: p})
-		}
-	}
-
-	if len(items) == 0 {
-		items = append(items, item{profile: profiles.Profile{Name: "No Profiles", Host: "Add one to start"}})
-	}
-
-	l := list.New(items, list.NewDefaultDelegate(), 0, 0)
+	l := list.New([]list.Item{}, list.NewDefaultDelegate(), 0, 0)
 	l.Title = "Zet-SSH | Connections"
 	l.SetShowHelp(true)
 
-	return Model{
+	m := Model{
 		list:  l,
 		store: store,
 		form:  NewForm(),
 	}
+	m.reloadItems()
+	return m
 }
 
 func (m Model) Init() tea.Cmd {
@@ -55,12 +47,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyMsg:
 			if msg.String() == "esc" {
 				m.form.active = false
+				m.form.errMsg = ""
 				return m, nil
 			}
 		case profiles.Profile:
+			if err := m.store.Upsert(msg); err != nil {
+				m.statusMsg = "Save failed: " + err.Error()
+				return m, nil
+			}
+			m.reloadItems()
+			m.statusMsg = "Profile saved"
 			m.form.active = false
-			m.store.Add(msg)
-			m.list.InsertItem(len(m.list.Items()), item{profile: msg})
 			return m, nil
 		}
 		var cmd tea.Cmd
@@ -75,7 +72,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "n":
-			m.form.active = true
+			m.form.OpenNew()
+			return m, nil
+		case "e":
+			if i, ok := m.list.SelectedItem().(item); ok {
+				m.form = NewFormForProfile(i.profile)
+			}
 			return m, nil
 		case "enter":
 			if i, ok := m.list.SelectedItem().(item); ok {
@@ -100,5 +102,26 @@ func (m Model) View() string {
 				Padding(1).
 				Render(m.form.View()))
 	}
-	return lipgloss.NewStyle().Margin(1, 2).Render(m.list.View())
+
+	view := m.list.View()
+	if m.statusMsg != "" {
+		view = lipgloss.JoinVertical(lipgloss.Left, view, m.statusMsg)
+	}
+	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [enter] Connect")
+
+	return lipgloss.NewStyle().Margin(1, 2).Render(view)
+}
+
+func (m *Model) reloadItems() {
+	var items []list.Item
+	if m.store != nil {
+		for _, p := range m.store.List() {
+			items = append(items, item{profile: p})
+		}
+	}
+
+	if len(items) == 0 {
+		items = append(items, item{profile: profiles.Profile{Name: "No Profiles", Host: "Add one to start"}})
+	}
+	m.list.SetItems(items)
 }

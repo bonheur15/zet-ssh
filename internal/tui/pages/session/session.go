@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"zet-ssh/internal/core/profiles"
 	coreSFTP "zet-ssh/internal/core/sftp"
@@ -13,11 +14,14 @@ import (
 	"zet-ssh/internal/tui/components"
 	"zet-ssh/internal/tui/theme"
 
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	sshlib "golang.org/x/crypto/ssh"
 )
+
+var ansiEscape = regexp.MustCompile(`\x1b\[[0-?]*[ -/]*[@-~]`)
 
 type sshOutputMsg string
 type sshErrorMsg error
@@ -29,9 +33,19 @@ type sessionReadyMsg struct {
 	status     string
 }
 
-type transferResultMsg struct {
-	status string
-	err    error
+type transferUpdateMsg struct {
+	label   string
+	copied  int64
+	total   int64
+	done    bool
+	err     error
+	aborted bool
+}
+
+type filePreviewMsg struct {
+	title   string
+	content string
+	err     error
 }
 
 type Model struct {
@@ -51,6 +65,18 @@ type Model struct {
 
 	localBrowser  components.FileBrowser
 	remoteBrowser components.FileBrowser
+
+	transferInProgress bool
+	transferLabel      string
+	transferCopied     int64
+	transferTotal      int64
+	transferProgress   progress.Model
+	transferUpdates    chan tea.Msg
+	transferCancel     chan struct{}
+
+	previewOpen    bool
+	previewTitle   string
+	previewContent string
 }
 
 func New(p profiles.Profile, width, height int) Model {
@@ -70,19 +96,23 @@ func New(p profiles.Profile, width, height int) Model {
 	}
 
 	paneW := max(20, width/2-1)
-	paneH := max(5, height-4)
+	paneH := max(5, height-6)
 	local := components.NewFileBrowser(components.LocalSource{}, cwd, paneW, paneH)
 	remote := components.NewFileBrowser(components.LocalSource{}, "/", paneW, paneH)
 	local.Active = true
 
+	pb := progress.New(progress.WithScaledGradient("62", "86"))
+	pb.Width = 24
+
 	return Model{
-		profile:       p,
-		viewport:      vp,
-		width:         width,
-		height:        height,
-		status:        "Connecting...",
-		localBrowser:  local,
-		remoteBrowser: remote,
+		profile:          p,
+		viewport:         vp,
+		width:            width,
+		height:           height,
+		status:           "Connecting...",
+		localBrowser:     local,
+		remoteBrowser:    remote,
+		transferProgress: pb,
 	}
 }
 
@@ -130,7 +160,7 @@ func (m Model) Init() tea.Cmd {
 
 func waitForOutput(s *ssh.Session) tea.Cmd {
 	return func() tea.Msg {
-		buf := make([]byte, 2048)
+		buf := make([]byte, 4096)
 		n, err := s.Read(buf)
 		if err != nil {
 			if err == io.EOF {
@@ -142,6 +172,16 @@ func waitForOutput(s *ssh.Session) tea.Cmd {
 	}
 }
 
+func waitForTransferUpdate(ch <-chan tea.Msg) tea.Cmd {
+	return func() tea.Msg {
+		msg, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return msg
+	}
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	var cmds []tea.Cmd
@@ -150,7 +190,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case sessionReadyMsg:
 		m.sshSession = msg.session
 		m.sftpClient = msg.sftpClient
-		m.remoteBrowser = components.NewFileBrowser(m.sftpClient, msg.remotePath, max(20, m.width/2-1), max(5, m.height-4))
+		m.remoteBrowser = components.NewFileBrowser(m.sftpClient, msg.remotePath, max(20, m.width/2-1), max(5, m.height-6))
 		m.remoteReady = true
 		m.status = msg.status
 		m.viewport.SetContent("Connected.\n")
@@ -158,9 +198,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, waitForOutput(m.sshSession)
 
 	case sshOutputMsg:
-		m.terminalBuffer += string(msg)
-		m.viewport.SetContent(m.terminalBuffer)
-		m.viewport.GotoBottom()
+		m.appendTerminalOutput(string(msg))
 		return m, waitForOutput(m.sshSession)
 
 	case sshErrorMsg:
@@ -168,29 +206,72 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = fmt.Sprintf("Connection error: %v", m.err)
 		m.viewport.SetContent("\n" + m.status)
 
-	case transferResultMsg:
-		if msg.err != nil {
-			m.status = fmt.Sprintf("Transfer failed: %v", msg.err)
+	case transferUpdateMsg:
+		m.transferLabel = msg.label
+		m.transferCopied = msg.copied
+		m.transferTotal = msg.total
+		if msg.total > 0 {
+			pct := float64(msg.copied) / float64(msg.total)
+			if pct < 0 {
+				pct = 0
+			}
+			if pct > 1 {
+				pct = 1
+			}
+			m.transferProgress.SetPercent(pct)
+		}
+
+		if msg.done {
+			m.transferInProgress = false
+			if msg.aborted {
+				m.status = "Transfer cancelled"
+			} else if msg.err != nil {
+				m.status = fmt.Sprintf("Transfer failed: %v", msg.err)
+			} else {
+				m.status = "Transfer complete"
+				m.localBrowser.Refresh()
+				if m.remoteReady {
+					m.remoteBrowser.Refresh()
+				}
+			}
+			m.transferUpdates = nil
+			m.transferCancel = nil
 			return m, nil
 		}
-		m.status = msg.status
-		m.localBrowser.Refresh()
-		if m.remoteReady {
-			m.remoteBrowser.Refresh()
+
+		if m.transferUpdates != nil {
+			return m, waitForTransferUpdate(m.transferUpdates)
 		}
+
+	case filePreviewMsg:
+		if msg.err != nil {
+			m.status = fmt.Sprintf("Open failed: %v", msg.err)
+			return m, nil
+		}
+		m.previewTitle = msg.title
+		m.previewContent = msg.content
+		m.previewOpen = true
 		return m, nil
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 		m.viewport.Width = msg.Width
-		m.viewport.Height = max(1, msg.Height-3)
+		m.viewport.Height = max(1, msg.Height-4)
 		m.resizePanes()
 		if m.sshSession != nil {
-			_ = m.sshSession.Resize(m.width, m.height-3)
+			_ = m.sshSession.Resize(m.width, m.height-4)
 		}
 
 	case tea.KeyMsg:
+		if m.previewOpen {
+			switch msg.String() {
+			case "esc", "o", "q":
+				m.previewOpen = false
+			}
+			return m, nil
+		}
+
 		if m.fileMode {
 			return m.handleFileModeKey(msg)
 		}
@@ -207,7 +288,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.activePane = 0
 				m.localBrowser.Active = true
 				m.remoteBrowser.Active = false
-				m.status = "File mode: Tab switches pane, Enter opens directory, c copies"
+				m.status = "File mode: Tab switches pane, Enter opens directory, c copies, o opens file"
 			}
 			return m, nil
 		}
@@ -232,15 +313,34 @@ func (m Model) View() string {
 
 	main := m.viewport.View()
 	if m.fileMode {
-		main = lipgloss.JoinHorizontal(lipgloss.Top,
-			m.localBrowser.View(),
-			m.remoteBrowser.View(),
-		)
+		left := m.localBrowser.View()
+		right := m.remoteBrowser.View()
+		main = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+		if m.transferInProgress {
+			main = lipgloss.JoinVertical(lipgloss.Left, main, m.transferView())
+		}
+	}
+
+	if m.previewOpen {
+		preview := lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(theme.Accent).
+			Padding(1).
+			Width(max(40, m.width-6)).
+			Height(max(10, m.height-8)).
+			Render(lipgloss.JoinVertical(lipgloss.Left,
+				theme.Header.Render(m.previewTitle),
+				"",
+				m.previewContent,
+				"",
+				lipgloss.NewStyle().Foreground(theme.Inactive).Render("[Esc/o] Close"),
+			))
+		main = lipgloss.Place(m.width, m.height-4, lipgloss.Center, lipgloss.Center, preview)
 	}
 
 	hints := "[Esc/q] Dashboard  [Ctrl+C] Send SIGINT  [Ctrl+F] Toggle File Mode"
 	if m.fileMode {
-		hints = "[Tab] Switch pane  [Enter] Open dir  [Backspace] Up  [c] Copy file  [r] Refresh  [Ctrl+F] Back"
+		hints = "[Tab] Switch pane  [Enter] Open dir  [Backspace] Up  [c] Copy  [o] Open  [x] Cancel transfer  [r] Refresh  [Ctrl+F] Back"
 	}
 	footer := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.NewStyle().Foreground(theme.Inactive).Render(hints),
@@ -255,6 +355,9 @@ func (m Model) View() string {
 }
 
 func (m Model) Close() {
+	if m.transferCancel != nil {
+		close(m.transferCancel)
+	}
 	if m.sftpClient != nil {
 		_ = m.sftpClient.Close()
 	}
@@ -265,12 +368,24 @@ func (m Model) Close() {
 
 func (m *Model) resizePanes() {
 	paneW := max(20, m.width/2-1)
-	paneH := max(5, m.height-4)
+	paneH := max(5, m.height-8)
 	m.localBrowser.SetSize(paneW, paneH)
 	m.remoteBrowser.SetSize(paneW, paneH)
 }
 
 func (m Model) handleFileModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.transferInProgress {
+		switch msg.String() {
+		case "x", "ctrl+c":
+			if m.transferCancel != nil {
+				close(m.transferCancel)
+				m.transferCancel = nil
+				m.status = "Cancelling transfer..."
+			}
+			return m, nil
+		}
+	}
+
 	switch msg.String() {
 	case "ctrl+f":
 		m.fileMode = false
@@ -308,7 +423,13 @@ func (m Model) handleFileModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "c":
-		return m, m.transferSelected()
+		if m.transferInProgress {
+			m.status = "A transfer is already running"
+			return m, nil
+		}
+		return m, m.startTransfer()
+	case "o":
+		return m, m.openSelectedFile()
 	case "r":
 		m.localBrowser.Refresh()
 		m.remoteBrowser.Refresh()
@@ -325,52 +446,182 @@ func (m Model) handleFileModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m Model) transferSelected() tea.Cmd {
+func (m *Model) startTransfer() tea.Cmd {
 	if !m.remoteReady || m.sftpClient == nil {
 		return func() tea.Msg {
-			return transferResultMsg{err: fmt.Errorf("remote SFTP is not ready")}
+			return transferUpdateMsg{done: true, err: fmt.Errorf("remote SFTP is not ready")}
 		}
 	}
+
+	var label string
+	var run func(ch chan tea.Msg, cancel <-chan struct{})
 
 	if m.activePane == 0 {
 		item, ok := m.localBrowser.SelectedItem()
 		if !ok || item.IsParent {
-			return func() tea.Msg { return transferResultMsg{err: fmt.Errorf("select a local file first")} }
+			return func() tea.Msg { return transferUpdateMsg{done: true, err: fmt.Errorf("select a local file first")} }
 		}
 		if item.Info.IsDir() {
-			return func() tea.Msg { return transferResultMsg{err: fmt.Errorf("directory copy is not implemented yet")} }
+			return func() tea.Msg {
+				return transferUpdateMsg{done: true, err: fmt.Errorf("directory copy is not implemented yet")}
+			}
 		}
 
 		localPath, _ := m.localBrowser.SelectedPath()
 		remotePath := path.Join(m.remoteBrowser.CurrentPath(), item.Info.Name())
+		label = fmt.Sprintf("Uploading %s", filepath.Base(localPath))
 
-		return func() tea.Msg {
-			err := m.sftpClient.Upload(localPath, remotePath)
+		run = func(ch chan tea.Msg, cancel <-chan struct{}) {
+			err := m.sftpClient.UploadWithProgress(localPath, remotePath, func(copied, total int64) {
+				ch <- transferUpdateMsg{label: label, copied: copied, total: total}
+			}, cancel)
+
+			final := transferUpdateMsg{label: label, done: true, copied: m.transferCopied, total: m.transferTotal}
 			if err != nil {
-				return transferResultMsg{err: err}
+				if strings.Contains(strings.ToLower(err.Error()), "cancel") {
+					final.aborted = true
+				} else {
+					final.err = err
+				}
 			}
-			return transferResultMsg{status: fmt.Sprintf("Uploaded %s -> %s", filepath.Base(localPath), remotePath)}
+			ch <- final
+			close(ch)
+		}
+	} else {
+		item, ok := m.remoteBrowser.SelectedItem()
+		if !ok || item.IsParent {
+			return func() tea.Msg { return transferUpdateMsg{done: true, err: fmt.Errorf("select a remote file first")} }
+		}
+		if item.Info.IsDir() {
+			return func() tea.Msg {
+				return transferUpdateMsg{done: true, err: fmt.Errorf("directory copy is not implemented yet")}
+			}
+		}
+
+		remotePath, _ := m.remoteBrowser.SelectedPath()
+		localPath := filepath.Join(m.localBrowser.CurrentPath(), item.Info.Name())
+		label = fmt.Sprintf("Downloading %s", path.Base(remotePath))
+
+		run = func(ch chan tea.Msg, cancel <-chan struct{}) {
+			err := m.sftpClient.DownloadWithProgress(remotePath, localPath, func(copied, total int64) {
+				ch <- transferUpdateMsg{label: label, copied: copied, total: total}
+			}, cancel)
+
+			final := transferUpdateMsg{label: label, done: true, copied: m.transferCopied, total: m.transferTotal}
+			if err != nil {
+				if strings.Contains(strings.ToLower(err.Error()), "cancel") {
+					final.aborted = true
+				} else {
+					final.err = err
+				}
+			}
+			ch <- final
+			close(ch)
+		}
+	}
+
+	updates := make(chan tea.Msg, 64)
+	cancel := make(chan struct{})
+	m.transferUpdates = updates
+	m.transferCancel = cancel
+	m.transferInProgress = true
+	m.transferCopied = 0
+	m.transferTotal = 0
+	m.transferLabel = label
+	m.status = label
+
+	go run(updates, cancel)
+	return waitForTransferUpdate(updates)
+}
+
+func (m Model) openSelectedFile() tea.Cmd {
+	const maxPreview = 128 * 1024
+
+	if m.activePane == 0 {
+		item, ok := m.localBrowser.SelectedItem()
+		if !ok || item.IsParent {
+			return func() tea.Msg { return filePreviewMsg{err: fmt.Errorf("select a file first")} }
+		}
+		if item.Info.IsDir() {
+			return func() tea.Msg { return filePreviewMsg{err: fmt.Errorf("cannot open directory")} }
+		}
+		localPath, _ := m.localBrowser.SelectedPath()
+		return func() tea.Msg {
+			data, err := os.ReadFile(localPath)
+			if err != nil {
+				return filePreviewMsg{err: err}
+			}
+			if len(data) > maxPreview {
+				data = data[:maxPreview]
+			}
+			return filePreviewMsg{title: localPath, content: sanitizeTextPreview(string(data))}
 		}
 	}
 
 	item, ok := m.remoteBrowser.SelectedItem()
 	if !ok || item.IsParent {
-		return func() tea.Msg { return transferResultMsg{err: fmt.Errorf("select a remote file first")} }
+		return func() tea.Msg { return filePreviewMsg{err: fmt.Errorf("select a remote file first")} }
 	}
 	if item.Info.IsDir() {
-		return func() tea.Msg { return transferResultMsg{err: fmt.Errorf("directory copy is not implemented yet")} }
+		return func() tea.Msg { return filePreviewMsg{err: fmt.Errorf("cannot open directory")} }
 	}
-
 	remotePath, _ := m.remoteBrowser.SelectedPath()
-	localPath := filepath.Join(m.localBrowser.CurrentPath(), item.Info.Name())
+	if m.sftpClient == nil {
+		return func() tea.Msg { return filePreviewMsg{err: fmt.Errorf("remote SFTP is not ready")} }
+	}
 
 	return func() tea.Msg {
-		err := m.sftpClient.Download(remotePath, localPath)
+		f, err := m.sftpClient.OpenRead(remotePath)
 		if err != nil {
-			return transferResultMsg{err: err}
+			return filePreviewMsg{err: err}
 		}
-		return transferResultMsg{status: fmt.Sprintf("Downloaded %s -> %s", path.Base(remotePath), localPath)}
+		defer f.Close()
+
+		data, err := io.ReadAll(io.LimitReader(f, maxPreview))
+		if err != nil {
+			return filePreviewMsg{err: err}
+		}
+
+		return filePreviewMsg{title: remotePath, content: sanitizeTextPreview(string(data))}
 	}
+}
+
+func (m Model) transferView() string {
+	pct := 0.0
+	if m.transferTotal > 0 {
+		pct = float64(m.transferCopied) / float64(m.transferTotal)
+	}
+	if pct < 0 {
+		pct = 0
+	}
+	if pct > 1 {
+		pct = 1
+	}
+
+	line := fmt.Sprintf("%s %d/%d bytes", m.transferLabel, m.transferCopied, m.transferTotal)
+	bar := m.transferProgress.ViewAs(pct)
+	cancelHint := lipgloss.NewStyle().Foreground(theme.Warning).Render("Press x to cancel")
+	return lipgloss.NewStyle().PaddingTop(1).Render(lipgloss.JoinVertical(lipgloss.Left, line, bar, cancelHint))
+}
+
+func (m *Model) appendTerminalOutput(raw string) {
+	if strings.Contains(raw, "\x1bc") || strings.Contains(raw, "\x1b[2J") {
+		m.terminalBuffer = ""
+	}
+
+	clean := ansiEscape.ReplaceAllString(raw, "")
+	clean = strings.ReplaceAll(clean, "\r", "")
+	if clean == "" {
+		return
+	}
+
+	m.terminalBuffer += clean
+	if len(m.terminalBuffer) > 250000 {
+		m.terminalBuffer = m.terminalBuffer[len(m.terminalBuffer)-250000:]
+	}
+
+	m.viewport.SetContent(m.terminalBuffer)
+	m.viewport.GotoBottom()
 }
 
 func buildAuthMethods(profile profiles.Profile) ([]sshlib.AuthMethod, []string) {
@@ -477,6 +728,8 @@ func keyToBytes(msg tea.KeyMsg) []byte {
 		return []byte("\x1b[D")
 	case tea.KeyCtrlD:
 		return []byte{4}
+	case tea.KeyCtrlL:
+		return []byte{12}
 	case tea.KeyCtrlZ:
 		return []byte{26}
 	}
@@ -485,6 +738,15 @@ func keyToBytes(msg tea.KeyMsg) []byte {
 		return []byte(string(msg.Runes))
 	}
 	return nil
+}
+
+func sanitizeTextPreview(in string) string {
+	in = ansiEscape.ReplaceAllString(in, "")
+	in = strings.ReplaceAll(in, "\r", "")
+	if strings.TrimSpace(in) == "" {
+		return "(empty or binary content)"
+	}
+	return in
 }
 
 func max(a, b int) int {

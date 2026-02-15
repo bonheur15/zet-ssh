@@ -26,3 +26,7 @@
 - [x] SFTP File Transfer Logic
 - [x] Multi-Pane Workspace (Local/Remote panes in session mode)
 - [x] Theming & Styling (`~/.config/zet-ssh/theme.json` overrides)
+- [x] Transfer Progress + Cancel (live progress bar and abort key)
+- [x] File Open/Preview in Pane Mode
+- [x] Profile Editing + Improved Save Validation
+- [x] Multi-Session Tabs and Switching

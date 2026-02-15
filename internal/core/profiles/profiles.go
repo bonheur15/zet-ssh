@@ -2,6 +2,7 @@ package profiles
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -80,5 +81,43 @@ func (s *Store) Add(p Profile) error {
 func (s *Store) List() []Profile {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return s.profiles
+	out := make([]Profile, len(s.profiles))
+	copy(out, s.profiles)
+	return out
+}
+
+func (s *Store) Update(p Profile) error {
+	s.mu.Lock()
+	found := false
+	for i := range s.profiles {
+		if s.profiles[i].ID == p.ID {
+			s.profiles[i] = p
+			found = true
+			break
+		}
+	}
+	s.mu.Unlock()
+
+	if !found {
+		return fmt.Errorf("profile not found: %s", p.ID)
+	}
+	return s.Save()
+}
+
+func (s *Store) Upsert(p Profile) error {
+	if p.ID == "" {
+		return s.Add(p)
+	}
+
+	s.mu.Lock()
+	for i := range s.profiles {
+		if s.profiles[i].ID == p.ID {
+			s.profiles[i] = p
+			s.mu.Unlock()
+			return s.Save()
+		}
+	}
+	s.profiles = append(s.profiles, p)
+	s.mu.Unlock()
+	return s.Save()
 }
