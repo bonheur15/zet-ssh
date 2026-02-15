@@ -1,39 +1,44 @@
-# Zet-SSH Architecture (Qt 6 / Linux)
+# Zet-SSH Architecture (Go / TUI)
 
 ## Stack
-- Qt 6 + QML (Qt Quick Controls 2)
-- C++17 backend services exposed to QML
-- External system tools for SSH/SFTP/tunnels (`ssh`, `sftp`, `scp`, `ssh-keygen`)
-- Encrypted vault using OpenSSL AES-256-GCM + PBKDF2-HMAC-SHA256
+- **Language:** Go (Golang)
+- **UI Framework:** Bubble Tea (Elm architecture for TUI)
+- **Styling:** Lip Gloss (CSS-like styling for terminal)
+- **SSH/SFTP Backend:** Pure Go (`golang.org/x/crypto/ssh`, `github.com/pkg/sftp`)
+- **Crypto:** Go Standard Library + `golang.org/x/crypto` (Argon2id, ChaCha20-Poly1305)
 
-## Core components
-- `Vault` (encrypted secrets store, auto-lock)
-- `ProfilesModel` (saved connections, tags, validation)
-- `SnippetsModel` (command library, variables)
-- `WorkspaceStore` (tabs, tunnels, file roots, layouts)
-- `CommandLogModel` (transparent command log + redaction)
-- `SshSessionManager` (spawned SSH sessions)
-- `SftpClient` (file ops via `sftp`/`scp`)
-- `TunnelManager` (local/remote/SOCKS forwarding)
-- `KnownHostsManager` (view/remove entries)
+## Core Components
+- **Bubble Tea Model:** Central state machine handling UI updates and events.
+- **Vault Service:** Encrypted secrets store with auto-lock functionality.
+- **Profiles Store:** JSON-based persistence for connection details.
+- **Session Manager:** Manages active SSH clients, PTY sizing, and signal propagation.
+- **TUI/Terminal Emulator:** Embedded terminal widget (e.g., `viewport` or `term`) to render remote shells within the app.
+- **SFTP Client:** Internal client for the TUI file manager pane.
+- **Tunnel Manager:** Pure Go implementation of local/remote/dynamic forwarding.
+- **Command Log:** In-memory buffer of executed operations, flushed to disk/UI.
 
-## Data files
-Stored under `~/.config/zet-ssh/`:
-- `profiles.json`
-- `snippets.json`
-- `workspaces.json`
-- `commandlog.jsonl`
-- `vault.zet` (encrypted)
+## Data Files
+Stored under `~/.config/zet-ssh/` (XDG Base Directory compliant):
+- `profiles.json` (Connection definitions, tags)
+- `snippets.json` (Command library)
+- `workspaces.json` (Layouts, active tabs state)
+- `commandlog.jsonl` (Audit log)
+- `vault.zet` (Encrypted binary file)
 
-## UI layout
-- Top bar: workspace + search + quick connect
-- Left sidebar: tabs, quick actions, palette
-- Center: terminal sessions
-- Right panel: profiles / file browser
-- Bottom panel: command log
+## UI Layout (TUI)
+- **Header:** Workspace name, active profile status, breadcrumbs.
+- **Sidebar (Collapsible):**
+  - **Tabs:** Active sessions list.
+  - **Profiles:** Tree view of saved connections.
+  - **File Browser:** Local/Remote file tree toggle.
+- **Main View (Panes):**
+  - **Terminal Pane:** The active SSH session interaction area.
+  - **Split View:** Support for side-by-side terminals or File Manager.
+- **Footer:** Status bar (connection health, latency), Command Input (for internal Zet-SSH commands), Key hints.
 
 ## Security
-- Strict host key checking by default
-- Encrypted vault required for secrets
-- Redaction enabled in command logs
-- Dangerous command confirmation rules
+- **Memory Safety:** Go's managed memory model.
+- **Encryption:** Vault uses XChaCha20-Poly1305 / AES-256-GCM. key derivation via Argon2id.
+- **Zeroization:** Sensitive memory (passwords/keys) cleared from memory when vault locks (where possible via Go).
+- **Redaction:** UI logs automatically mask detected secrets/keys.
+- **Host Keys:** Strict checking enforced via `known_hosts`.
