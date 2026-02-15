@@ -1,18 +1,18 @@
 # Progress Tracker
 
-## Phase 1: Initialization & Skeleton 🏗️
+## Phase 1: Initialization & Skeleton
 - [x] Project Structure Setup
 - [x] Go Module Initialization
 - [x] TUI Application Skeleton (Bubble Tea)
 - [ ] Layout Implementation (Sidebar, Main, Status Bar)
 
-## Phase 2: Core Logic 🧠
+## Phase 2: Core Logic
 - [x] Profile Manager (CRUD + JSON Persistence)
 - [x] Vault (Encryption/Decryption)
 - [x] SSH Client Wrapper
 - [x] SFTP Client Wrapper
 
-## Phase 3: TUI Features 🎨
+## Phase 3: TUI Features
 - [x] Dashboard / Profile List
 - [x] Command Palette
 - [x] Add Profile Form
@@ -21,7 +21,7 @@
 - [x] File Browser Component (Initial)
 - [x] Auth Integration Core
 
-## Phase 4: Polish & Advanced Features ✨
+## Phase 4: Polish & Advanced Features
 - [x] Tunnel Builder UI (Initial)
 - [ ] SFTP File Transfer Logic
 - [ ] Multi-Pane Workspace
