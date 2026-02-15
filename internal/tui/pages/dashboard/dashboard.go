@@ -42,6 +42,25 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case formSaveMsg:
+		if err := m.store.Upsert(msg.profile); err != nil {
+			m.statusMsg = "Save failed: " + err.Error()
+			return m, nil
+		}
+		m.reloadItems()
+		m.selectProfileByID(msg.profile.ID)
+		if msg.connect {
+			m.statusMsg = "Profile saved and connecting..."
+			return m, func() tea.Msg {
+				return msg.profile
+			}
+		}
+		m.statusMsg = "Profile saved"
+		m.form.active = false
+		return m, nil
+	}
+
 	if m.form.active {
 		switch msg := msg.(type) {
 		case tea.KeyMsg:
@@ -50,22 +69,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.form.errMsg = ""
 				return m, nil
 			}
-		case formSaveMsg:
-			if err := m.store.Upsert(msg.profile); err != nil {
-				m.statusMsg = "Save failed: " + err.Error()
-				return m, nil
-			}
-			m.reloadItems()
-			m.selectProfileByID(msg.profile.ID)
-			if msg.connect {
-				m.statusMsg = "Profile saved and connecting..."
-				return m, func() tea.Msg {
-					return msg.profile
-				}
-			}
-			m.statusMsg = "Profile saved"
-			m.form.active = false
-			return m, nil
 		}
 		var cmd tea.Cmd
 		m.form, cmd = m.form.Update(msg)

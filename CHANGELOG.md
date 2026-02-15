@@ -45,3 +45,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auth Retry UX:** When authentication fails, session now prompts for password and retries with password + keyboard-interactive auth methods.
 - **Auth Order:** Connection attempts now always try private keys first (profile key + discovered `~/.ssh/id_*` keys + agent), then password fallback.
 - **Profile Form Save Flow:** Fixed save reliability and added explicit separate actions for save-only vs save-and-connect in both create and edit forms.
+- **Profile Save Dispatch:** Fixed a dashboard message-order bug where save messages were dropped after form close, causing Ctrl+S/Ctrl+G to appear non-functional.
