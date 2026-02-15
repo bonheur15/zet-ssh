@@ -119,6 +119,17 @@ func PasswordAuth(pass string) ssh.AuthMethod {
 	return ssh.Password(pass)
 }
 
+// KeyboardInteractiveAuth returns keyboard-interactive auth method using the provided password.
+func KeyboardInteractiveAuth(pass string) ssh.AuthMethod {
+	return ssh.KeyboardInteractive(func(user, instruction string, questions []string, echos []bool) ([]string, error) {
+		answers := make([]string, len(questions))
+		for i := range questions {
+			answers[i] = pass
+		}
+		return answers, nil
+	})
+}
+
 // PublicKeyAuth returns an auth method using the provided private key data.
 func PublicKeyAuth(keyData []byte) (ssh.AuthMethod, error) {
 	signer, err := ssh.ParsePrivateKey(keyData)

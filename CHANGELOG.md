@@ -42,3 +42,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSH Auth Failure:** Session connect now builds real auth methods (agent, key files, optional env password) instead of trying with an empty auth list.
 - **Session Lifecycle:** Returning from session now closes SSH/SFTP resources.
 - **Terminal Clear Handling:** Improved handling of clear-screen escape sequences to reduce viewport corruption after `clear`.
+- **Auth Retry UX:** When authentication fails, session now prompts for password and retries with password + keyboard-interactive auth methods.

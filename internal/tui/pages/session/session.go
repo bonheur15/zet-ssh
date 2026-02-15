@@ -15,6 +15,7 @@ import (
 	"zet-ssh/internal/tui/theme"
 
 	"github.com/charmbracelet/bubbles/progress"
+	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -77,6 +78,10 @@ type Model struct {
 	previewOpen    bool
 	previewTitle   string
 	previewContent string
+
+	passwordPromptOpen bool
+	passwordInput      textinput.Model
+	runtimePassword    string
 }
 
 func New(p profiles.Profile, width, height int) Model {
@@ -104,6 +109,11 @@ func New(p profiles.Profile, width, height int) Model {
 	pb := progress.New(progress.WithScaledGradient("62", "86"))
 	pb.Width = 24
 
+	passInput := textinput.New()
+	passInput.Placeholder = "SSH Password"
+	passInput.EchoMode = textinput.EchoPassword
+	passInput.EchoCharacter = '*'
+
 	return Model{
 		profile:          p,
 		viewport:         vp,
@@ -113,12 +123,17 @@ func New(p profiles.Profile, width, height int) Model {
 		localBrowser:     local,
 		remoteBrowser:    remote,
 		transferProgress: pb,
+		passwordInput:    passInput,
 	}
 }
 
 func (m Model) Init() tea.Cmd {
+	return m.connectCmd("")
+}
+
+func (m Model) connectCmd(password string) tea.Cmd {
 	return func() tea.Msg {
-		auth, warnings := buildAuthMethods(m.profile)
+		auth, warnings := buildAuthMethods(m.profile, password)
 		if len(auth) == 0 {
 			return sshErrorMsg(fmt.Errorf("no authentication methods available (try SSH agent, key path, or set ZET_SSH_PASSWORD)"))
 		}
@@ -188,6 +203,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case sessionReadyMsg:
+		m.passwordPromptOpen = false
+		m.passwordInput.SetValue("")
+		m.runtimePassword = ""
 		m.sshSession = msg.session
 		m.sftpClient = msg.sftpClient
 		m.remoteBrowser = components.NewFileBrowser(m.sftpClient, msg.remotePath, max(20, m.width/2-1), max(5, m.height-6))
@@ -205,6 +223,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.err = msg
 		m.status = fmt.Sprintf("Connection error: %v", m.err)
 		m.viewport.SetContent("\n" + m.status)
+		if shouldPromptPassword(m.err) && !m.passwordPromptOpen {
+			m.passwordPromptOpen = true
+			m.passwordInput.SetValue("")
+			m.passwordInput.Focus()
+			m.status = "Authentication failed. Enter password and press Enter to retry"
+		}
 
 	case transferUpdateMsg:
 		m.transferLabel = msg.label
@@ -264,6 +288,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
+		if m.passwordPromptOpen {
+			switch msg.String() {
+			case "enter":
+				pass := m.passwordInput.Value()
+				m.passwordInput.SetValue("")
+				m.passwordPromptOpen = false
+				m.runtimePassword = pass
+				m.status = "Retrying with password..."
+				return m, m.connectCmd(pass)
+			case "esc":
+				m.passwordPromptOpen = false
+				m.status = fmt.Sprintf("Connection error: %v", m.err)
+				return m, nil
+			}
+			m.passwordInput, cmd = m.passwordInput.Update(msg)
+			return m, cmd
+		}
+
 		if m.previewOpen {
 			switch msg.String() {
 			case "esc", "o", "q":
@@ -336,6 +378,22 @@ func (m Model) View() string {
 				lipgloss.NewStyle().Foreground(theme.Inactive).Render("[Esc/o] Close"),
 			))
 		main = lipgloss.Place(m.width, m.height-4, lipgloss.Center, lipgloss.Center, preview)
+	}
+	if m.passwordPromptOpen {
+		prompt := lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(theme.Warning).
+			Padding(1).
+			Width(max(40, m.width/2)).
+			Render(lipgloss.JoinVertical(lipgloss.Left,
+				theme.Header.Render("SSH Authentication Required"),
+				"Enter password for "+m.profile.User+"@"+m.profile.Host,
+				"",
+				m.passwordInput.View(),
+				"",
+				lipgloss.NewStyle().Foreground(theme.Inactive).Render("[Enter] Retry  [Esc] Cancel"),
+			))
+		main = lipgloss.Place(m.width, m.height-4, lipgloss.Center, lipgloss.Center, prompt)
 	}
 
 	hints := "[Esc/q] Dashboard  [Ctrl+C] Send SIGINT  [Ctrl+F] Toggle File Mode"
@@ -624,11 +682,14 @@ func (m *Model) appendTerminalOutput(raw string) {
 	m.viewport.GotoBottom()
 }
 
-func buildAuthMethods(profile profiles.Profile) ([]sshlib.AuthMethod, []string) {
+func buildAuthMethods(profile profiles.Profile, runtimePassword string) ([]sshlib.AuthMethod, []string) {
 	var methods []sshlib.AuthMethod
 	var warnings []string
 
 	password := os.Getenv("ZET_SSH_PASSWORD")
+	if strings.TrimSpace(runtimePassword) != "" {
+		password = runtimePassword
+	}
 	keyPassphrase := os.Getenv("ZET_SSH_KEY_PASSPHRASE")
 
 	addPassword := func() {
@@ -637,6 +698,7 @@ func buildAuthMethods(profile profiles.Profile) ([]sshlib.AuthMethod, []string) 
 			return
 		}
 		methods = append(methods, ssh.PasswordAuth(password))
+		methods = append(methods, ssh.KeyboardInteractiveAuth(password))
 	}
 
 	addAgent := func() {
@@ -704,6 +766,14 @@ func buildAuthMethods(profile profiles.Profile) ([]sshlib.AuthMethod, []string) 
 	}
 
 	return methods, warnings
+}
+
+func shouldPromptPassword(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "unable to authenticate") || strings.Contains(msg, "no supported methods")
 }
 
 func keyToBytes(msg tea.KeyMsg) []byte {
