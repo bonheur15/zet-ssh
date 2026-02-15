@@ -105,8 +105,25 @@ func (s *Session) Resize(width, height int) error {
 	return s.session.WindowChange(height, width)
 }
 
-// Helper to get local ssh-agent auth
-func GetAgentAuth() (ssh.AuthMethod, error) {
-	// Not implemented here yet, but standard practice
-	return nil, fmt.Errorf("agent auth not implemented")
+// PasswordAuth returns an auth method using the provided password.
+func PasswordAuth(pass string) ssh.AuthMethod {
+	return ssh.Password(pass)
+}
+
+// PublicKeyAuth returns an auth method using the provided private key data.
+func PublicKeyAuth(keyData []byte) (ssh.AuthMethod, error) {
+	signer, err := ssh.ParsePrivateKey(keyData)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.PublicKeys(signer), nil
+}
+
+// PublicKeyAuthWithPassphrase returns an auth method using the provided encrypted private key data.
+func PublicKeyAuthWithPassphrase(keyData []byte, passphrase []byte) (ssh.AuthMethod, error) {
+	signer, err := ssh.ParsePrivateKeyWithPassphrase(keyData, passphrase)
+	if err != nil {
+		return nil, err
+	}
+	return ssh.PublicKeys(signer), nil
 }

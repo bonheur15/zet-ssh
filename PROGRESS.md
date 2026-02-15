@@ -17,10 +17,12 @@
 - [x] Command Palette
 - [x] Add Profile Form
 - [x] Vault Unlock UI
-- [/] Terminal Emulator Integration (Basic I/O Bridge)
-- [ ] File Browser Pane
+- [x] Terminal Emulator Integration (Basic I/O Bridge)
+- [x] File Browser Component (Initial)
+- [x] Auth Integration Core
 
 ## Phase 4: Polish & Advanced Features ✨
-- [ ] Tunnel Builder
+- [x] Tunnel Builder UI (Initial)
+- [ ] SFTP File Transfer Logic
+- [ ] Multi-Pane Workspace
 - [ ] Theming & Styling
-- [ ] Transparent Command Log

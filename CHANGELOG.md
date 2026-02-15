@@ -20,3 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TUI Dashboard:** Improved list view with real profiles and "Add Profile" functionality.
 - **Command Palette:** Added `Ctrl+K` palette for quick actions.
 - **Vault UI:** Added secure master password prompt for vault unlocking.
+- **Terminal Bridge:** Implemented live I/O between Bubble Tea and SSH sessions.
+- **Advanced Auth:** Added support for Password and Public Key authentication in SSH core.
+- **File Browser:** Created a new TUI component for directory navigation.
+- **Tunnel Builder:** Added a dedicated UI page for managing SSH tunnels.
