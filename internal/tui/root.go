@@ -23,20 +23,25 @@ const (
 )
 
 type AppModel struct {
-	state         sessionState
-	dashboard     tea.Model
-	sessions      []tea.Model
-	sessionMeta   []profiles.Profile
-	activeSession int
-	palette       components.Palette
-	vaultUnlock   components.VaultUnlock
-	profilesStore *profiles.Store
-	vaultPassword string
-	width         int
-	height        int
+	state          sessionState
+	dashboard      tea.Model
+	sessions       []tea.Model
+	sessionMeta    []profiles.Profile
+	activeSession  int
+	palette        components.Palette
+	vaultUnlock    components.VaultUnlock
+	profilesStore  *profiles.Store
+	vaultPassword  string
+	width          int
+	height         int
+	initialProfile *profiles.Profile
 }
 
 func NewAppModel() AppModel {
+	return NewAppModelWithInitialProfile(nil)
+}
+
+func NewAppModelWithInitialProfile(initial *profiles.Profile) AppModel {
 	home, _ := os.UserHomeDir()
 	configDir := filepath.Join(home, ".config", "zet-ssh")
 	store, _ := profiles.NewStore(configDir)
@@ -48,17 +53,23 @@ func NewAppModel() AppModel {
 	}
 
 	return AppModel{
-		state:         viewDashboard,
-		dashboard:     dashboard.New(store),
-		palette:       components.NewPalette(),
-		vaultUnlock:   components.NewVaultUnlock(),
-		profilesStore: store,
-		activeSession: -1,
+		state:          viewDashboard,
+		dashboard:      dashboard.New(store),
+		palette:        components.NewPalette(),
+		vaultUnlock:    components.NewVaultUnlock(),
+		profilesStore:  store,
+		activeSession:  -1,
+		initialProfile: initial,
 	}
 }
 
 func (m AppModel) Init() tea.Cmd {
-	return tea.Batch(m.dashboard.Init())
+	cmds := []tea.Cmd{m.dashboard.Init()}
+	if m.initialProfile != nil {
+		p := *m.initialProfile
+		cmds = append(cmds, func() tea.Msg { return p })
+	}
+	return tea.Batch(cmds...)
 }
 
 func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

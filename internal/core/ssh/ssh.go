@@ -25,20 +25,7 @@ type Session struct {
 }
 
 func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, error) {
-	hostKeyCallback, err := HostKeyCallbackFromKnownHosts(DefaultKnownHostsFiles()...)
-	if err != nil {
-		return nil, err
-	}
-
-	config := &ssh.ClientConfig{
-		User:            user,
-		Auth:            auth,
-		HostKeyCallback: hostKeyCallback,
-		Timeout:         10 * time.Second,
-	}
-
-	addr := fmt.Sprintf("%s:%d", host, port)
-	client, err := ssh.Dial("tcp", addr, config)
+	client, err := NewClient(user, host, port, auth)
 	if err != nil {
 		return nil, err
 	}
@@ -77,6 +64,24 @@ func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, erro
 		stdout:  stdout,
 		stderr:  stderr,
 	}, nil
+}
+
+// NewClient dials an SSH client with strict known_hosts verification.
+func NewClient(user, host string, port int, auth []ssh.AuthMethod) (*ssh.Client, error) {
+	hostKeyCallback, err := HostKeyCallbackFromKnownHosts(DefaultKnownHostsFiles()...)
+	if err != nil {
+		return nil, err
+	}
+
+	config := &ssh.ClientConfig{
+		User:            user,
+		Auth:            auth,
+		HostKeyCallback: hostKeyCallback,
+		Timeout:         10 * time.Second,
+	}
+
+	addr := fmt.Sprintf("%s:%d", host, port)
+	return ssh.Dial("tcp", addr, config)
 }
 
 // DefaultKnownHostsFiles returns preferred known_hosts files in search order.
