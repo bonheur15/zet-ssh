@@ -18,3 +18,4 @@
 - [ ] Replace tunnel-builder placeholder with real local/remote/dynamic forwarding runtime + health indicators.
 - [ ] Implement command palette actions (execute selected actions, not just list items).
 - [ ] Add transparent command log pane with collapsible UI and JSONL persistence.
+- [ ] Theme changer
