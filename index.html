@@ -3,281 +3,160 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zet-SSH | Open-Source SSH TUI Workspace</title>
-    <meta
-      name="description"
-      content="Zet-SSH is an open-source terminal-first SSH workspace with profiles, secure host key verification, SFTP file operations, tunnels, and release-based updates."
-    />
+    <title>Zet-SSH</title>
+    <meta name="description" content="Open-source SSH workspace for terminal-first teams." />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
-
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              bg: "#f5f7fa",
+              bg: "#f3f4ee",
+              text: "#171d22",
+              sub: "#4c5d69",
+              line: "#cfd8df",
+              brand: "#0e8a78",
+              brandSoft: "#dff4ef",
               panel: "#ffffff",
-              text: "#10212b",
-              subtext: "#516370",
-              line: "#d7e0e7",
-              primary: "#0f6b8f",
-              primarySoft: "#e6f2f7",
-              success: "#0f8f6b"
+              dark: "#15242d"
             },
             fontFamily: {
-              sans: ["Manrope", "sans-serif"],
+              sans: ["Sora", "sans-serif"],
               mono: ["JetBrains Mono", "monospace"]
             },
             boxShadow: {
-              card: "0 8px 24px rgba(16, 33, 43, 0.08)"
+              soft: "0 14px 28px rgba(21,36,45,0.08)"
             }
           }
         }
       };
     </script>
   </head>
-
   <body class="bg-bg text-text antialiased">
-    <div class="min-h-screen">
-      <header class="border-b border-line bg-panel">
-        <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4 lg:px-10">
-          <div class="flex items-center gap-3">
-            <div class="grid h-9 w-9 place-items-center rounded-md bg-primary text-sm font-bold text-white">Z</div>
-            <div>
-              <p class="text-sm font-bold">Zet-SSH</p>
-              <p class="text-xs text-subtext">Open-Source SSH Workspace</p>
+    <main class="mx-auto max-w-6xl px-6 py-8 lg:px-10 lg:py-10">
+      <section class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
+        <article class="rounded-2xl border border-line bg-panel p-8 shadow-soft">
+          <div class="mb-8 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="grid h-10 w-10 place-items-center rounded-md bg-brand font-bold text-white">Z</div>
+              <div>
+                <p class="text-sm font-bold">Zet-SSH</p>
+                <p class="text-xs text-sub">Open Source · MIT</p>
+              </div>
             </div>
+            <a href="https://github.com/bonheur15/zet-ssh" target="_blank" rel="noreferrer" class="rounded-md border border-line px-3 py-2 text-xs font-semibold hover:bg-bg">GitHub</a>
           </div>
 
-          <div class="flex items-center gap-3">
-            <a
-              href="https://github.com/bonheur15/zet-ssh"
-              target="_blank"
-              rel="noreferrer"
-              class="rounded-md border border-line px-3 py-2 text-sm font-semibold hover:bg-bg"
-            >
-              GitHub
-            </a>
-            <button
-              id="copyInstallBtn"
-              class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-[#0c5774]"
-            >
-              Copy Install
-            </button>
+          <h1 class="max-w-2xl text-4xl font-extrabold leading-tight lg:text-5xl">
+            Sharp SSH workflows.
+            <span class="block text-brand">One terminal workspace.</span>
+          </h1>
+
+          <p class="mt-5 max-w-xl text-sm text-sub lg:text-base">
+            Profiles, vault, SFTP, tunnels, tabs, updates.
+          </p>
+
+          <div class="mt-7 flex flex-wrap gap-3">
+            <button id="copyInstall" class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#0b6e60]">Copy Install</button>
+            <a href="#grid" class="rounded-md border border-line px-4 py-2 text-sm font-semibold hover:bg-bg">See Features</a>
           </div>
-        </div>
-      </header>
+          <p id="copyStatus" class="mt-3 text-xs text-sub"></p>
+        </article>
 
-      <main class="mx-auto max-w-6xl space-y-12 px-6 py-10 lg:px-10 lg:py-14">
-        <section class="grid gap-6 lg:grid-cols-2">
-          <article class="rounded-xl border border-line bg-panel p-7 shadow-card">
-            <p class="mb-3 inline-block rounded-full bg-primarySoft px-3 py-1 text-xs font-semibold tracking-wide text-primary">
-              Terminal-First Operations
-            </p>
-            <h1 class="text-3xl font-extrabold leading-tight lg:text-4xl">
-              Professional SSH workflows in one consistent TUI
-            </h1>
-            <p class="mt-4 text-subtext">
-              Zet-SSH combines profile management, encrypted secrets, remote file workflows, tunnel orchestration,
-              and update automation in a single keyboard-driven interface.
-            </p>
-
-            <div class="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-              <div class="rounded-lg border border-line bg-bg p-3">
-                <p class="font-semibold">Secure by default</p>
-                <p class="mt-1 text-subtext">Strict known_hosts validation and local encrypted vault.</p>
-              </div>
-              <div class="rounded-lg border border-line bg-bg p-3">
-                <p class="font-semibold">Multi-session productivity</p>
-                <p class="mt-1 text-subtext">Tabbed SSH sessions, fast switching, focused keybindings.</p>
-              </div>
-            </div>
-
-            <p id="copyStatus" class="mt-4 text-sm text-subtext"></p>
-          </article>
-
-          <article class="rounded-xl border border-line bg-panel p-7 shadow-card">
-            <h2 class="text-lg font-bold">CLI Entry Points</h2>
-            <p class="mt-2 text-sm text-subtext">One binary for interactive and headless operation.</p>
-
-            <div class="mt-5 space-y-2 font-mono text-sm">
-              <div class="rounded-md border border-line bg-bg px-3 py-2">zet</div>
-              <div class="rounded-md border border-line bg-bg px-3 py-2">zet connect &lt;name&gt;</div>
-              <div class="rounded-md border border-line bg-bg px-3 py-2">zet run &lt;name&gt; -- &lt;command&gt;</div>
-              <div class="rounded-md border border-line bg-bg px-3 py-2">zet update | zet update --check | zet version</div>
-            </div>
-
-            <div class="mt-5 rounded-md border border-line bg-bg p-3 text-xs text-subtext">
-              Install:
-              <code class="mt-1 block font-mono text-text">curl -fsSL https://raw.githubusercontent.com/bonheur15/zet-ssh/main/scripts/install.sh | sh</code>
-            </div>
-          </article>
-        </section>
-
-        <section class="rounded-xl border border-line bg-panel p-7 shadow-card">
-          <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <h2 class="text-2xl font-bold">Platform Capabilities</h2>
-            <div id="featureFilters" class="flex flex-wrap gap-2">
-              <button class="feature-filter rounded-full border border-line px-3 py-1 text-sm" data-filter="all">All</button>
-              <button class="feature-filter rounded-full border border-line px-3 py-1 text-sm" data-filter="profiles">Profiles</button>
-              <button class="feature-filter rounded-full border border-line px-3 py-1 text-sm" data-filter="security">Security</button>
-              <button class="feature-filter rounded-full border border-line px-3 py-1 text-sm" data-filter="ops">Ops</button>
-            </div>
+        <article class="rounded-2xl border border-dark bg-dark p-6 text-white shadow-soft">
+          <p class="font-mono text-xs text-[#8db2c2]">$ zet connect prod</p>
+          <div class="mt-4 rounded-lg border border-white/20 p-4 font-mono text-xs leading-6">
+            <p class="text-[#7ee0cd]">[connected] [sftp-ready] [tunnel-green]</p>
+            <p>deploy@10.0.0.50 ~</p>
+            <p class="text-[#7ee0cd]">❯ zet run prod -- uname -a</p>
           </div>
 
-          <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" id="featureCards">
-            <article class="feature-card rounded-lg border border-line p-4" data-tag="profiles">
-              <h3 class="font-semibold">Connection Profiles</h3>
-              <p class="mt-1 text-sm text-subtext">Create/edit profiles, import from `~/.ssh/config`, and paste-import raw ssh commands.</p>
-            </article>
-            <article class="feature-card rounded-lg border border-line p-4" data-tag="security">
-              <h3 class="font-semibold">Host Key Verification</h3>
-              <p class="mt-1 text-sm text-subtext">Strict known_hosts verification with fail-closed behavior.</p>
-            </article>
-            <article class="feature-card rounded-lg border border-line p-4" data-tag="security">
-              <h3 class="font-semibold">Encrypted Vault + Agent Forwarding</h3>
-              <p class="mt-1 text-sm text-subtext">Argon2id + ChaCha20-Poly1305 vault and per-profile SSH agent forwarding.</p>
-            </article>
-            <article class="feature-card rounded-lg border border-line p-4" data-tag="ops">
-              <h3 class="font-semibold">Dual-Pane SFTP Workflow</h3>
-              <p class="mt-1 text-sm text-subtext">File preview, transfer progress, cancellation, and recursive directory transfers.</p>
-            </article>
-            <article class="feature-card rounded-lg border border-line p-4" data-tag="ops">
-              <h3 class="font-semibold">Tunnel Manager</h3>
-              <p class="mt-1 text-sm text-subtext">Run local, remote, and dynamic SOCKS5 tunnels with health status inside session mode.</p>
-            </article>
-            <article class="feature-card rounded-lg border border-line p-4" data-tag="ops">
-              <h3 class="font-semibold">Release-Aware Updater</h3>
-              <p class="mt-1 text-sm text-subtext">Auto-selects matching OS/arch artifacts from GitHub Releases.</p>
-            </article>
+          <div class="mt-5 grid grid-cols-2 gap-2 text-center">
+            <div class="rounded-md bg-white/10 p-3">
+              <p class="text-xl font-bold">6</p>
+              <p class="text-[10px] uppercase tracking-wider text-[#9fbecc]">Release Targets</p>
+            </div>
+            <div class="rounded-md bg-white/10 p-3">
+              <p class="text-xl font-bold">3</p>
+              <p class="text-[10px] uppercase tracking-wider text-[#9fbecc]">Tunnel Modes</p>
+            </div>
           </div>
-        </section>
+        </article>
+      </section>
 
-        <section class="grid gap-6 lg:grid-cols-2">
-          <article class="rounded-xl border border-line bg-panel p-7 shadow-card">
-            <h2 class="text-2xl font-bold">Architecture Snapshot</h2>
-            <p class="mt-2 text-subtext">From the project docs and implementation.</p>
+      <section id="grid" class="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
+        <article class="rounded-2xl border border-line bg-panel p-6 shadow-soft">
+          <h2 class="text-lg font-bold">CLI</h2>
+          <div class="mt-3 space-y-2 font-mono text-xs">
+            <div class="rounded-md border border-line bg-bg px-3 py-2">zet</div>
+            <div class="rounded-md border border-line bg-bg px-3 py-2">zet connect &lt;name&gt;</div>
+            <div class="rounded-md border border-line bg-bg px-3 py-2">zet run &lt;name&gt; -- &lt;cmd&gt;</div>
+            <div class="rounded-md border border-line bg-bg px-3 py-2">zet update</div>
+          </div>
+        </article>
 
-            <div id="archTabs" class="mt-5 flex flex-wrap gap-2">
-              <button class="arch-tab rounded-md border border-line px-3 py-2 text-sm" data-tab="runtime">Runtime</button>
-              <button class="arch-tab rounded-md border border-line px-3 py-2 text-sm" data-tab="data">Data</button>
-              <button class="arch-tab rounded-md border border-line px-3 py-2 text-sm" data-tab="release">Release</button>
-            </div>
+        <article class="rounded-2xl border border-line bg-panel p-6 shadow-soft">
+          <div id="filters" class="mb-4 flex flex-wrap gap-2">
+            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="all">All</button>
+            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="core">Core</button>
+            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="secure">Secure</button>
+            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="ops">Ops</button>
+          </div>
 
-            <div class="mt-4 space-y-3 text-sm text-subtext">
-              <div id="runtime" class="arch-panel">
-                Bubble Tea manages dashboard/session state, with specialized models for file mode, tunnel mode, and overlays.
-                Core SSH and SFTP services are wired through session page logic.
-              </div>
-              <div id="data" class="arch-panel hidden">
-                `~/.config/zet-ssh/` stores `profiles.json`, `theme.json`, `vault.zet`, and optional app-local `known_hosts`.
-                Profile/auth data remains local and open-source auditable.
-              </div>
-              <div id="release" class="arch-panel hidden">
-                CI and release workflows build Linux/macOS/Windows artifacts for amd64/arm64, published as
-                `zet-&lt;os&gt;-&lt;arch&gt;.tar.gz` and consumed by installer/updater.
-              </div>
-            </div>
-          </article>
+          <div class="grid gap-2 sm:grid-cols-2" id="cards">
+            <div class="card rounded-md border border-line p-3" data-tag="core">Profiles + import</div>
+            <div class="card rounded-md border border-line p-3" data-tag="secure">known_hosts verify</div>
+            <div class="card rounded-md border border-line p-3" data-tag="secure">Vault + agent forward</div>
+            <div class="card rounded-md border border-line p-3" data-tag="ops">Dual-pane SFTP</div>
+            <div class="card rounded-md border border-line p-3" data-tag="ops">Recursive transfer</div>
+            <div class="card rounded-md border border-line p-3" data-tag="ops">L/R/D tunnels</div>
+            <div class="card rounded-md border border-line p-3" data-tag="ops">Release updater</div>
+            <div class="card rounded-md border border-line p-3" data-tag="core">Tabs + command palette</div>
+          </div>
+        </article>
+      </section>
 
-          <article class="rounded-xl border border-line bg-panel p-7 shadow-card">
-            <h2 class="text-2xl font-bold">Release Targets</h2>
-            <p class="mt-2 text-subtext">Current matrix used by GitHub Actions release flow.</p>
-
-            <div id="releaseMatrix" class="mt-5 grid gap-2 sm:grid-cols-2"></div>
-
-            <div class="mt-5 rounded-md border border-line bg-bg p-3 text-sm text-subtext">
-              Open source under MIT. Contributions and review are welcome.
-            </div>
-          </article>
-        </section>
-      </main>
-
-      <footer class="border-t border-line bg-panel">
-        <div class="mx-auto flex max-w-6xl flex-col gap-1 px-6 py-6 text-sm text-subtext lg:flex-row lg:items-center lg:justify-between lg:px-10">
-          <p>Zet-SSH is an open-source project for terminal-first engineers.</p>
-          <p class="font-mono text-xs">github.com/bonheur15/zet-ssh</p>
-        </div>
+      <footer class="mt-5 rounded-2xl border border-line bg-panel p-5 text-xs text-sub shadow-soft">
+        Built from README + project docs. Open for contributors.
       </footer>
-    </div>
+    </main>
 
     <script>
-      const installCommand = "curl -fsSL https://raw.githubusercontent.com/bonheur15/zet-ssh/main/scripts/install.sh | sh";
-      const copyBtn = document.getElementById("copyInstallBtn");
-      const copyStatus = document.getElementById("copyStatus");
-
-      copyBtn.addEventListener("click", async () => {
+      const install = "curl -fsSL https://raw.githubusercontent.com/bonheur15/zet-ssh/main/scripts/install.sh | sh";
+      document.getElementById("copyInstall").addEventListener("click", async () => {
+        const status = document.getElementById("copyStatus");
         try {
-          await navigator.clipboard.writeText(installCommand);
-          copyStatus.textContent = "Install command copied to clipboard.";
+          await navigator.clipboard.writeText(install);
+          status.textContent = "Copied.";
         } catch {
-          copyStatus.textContent = installCommand;
+          status.textContent = install;
         }
       });
 
-      const filterButtons = document.querySelectorAll(".feature-filter");
-      const featureCards = document.querySelectorAll(".feature-card");
-      function setFeatureFilter(filter) {
-        filterButtons.forEach((btn) => {
-          const active = btn.dataset.filter === filter;
-          btn.classList.toggle("bg-primary", active);
-          btn.classList.toggle("text-white", active);
-          btn.classList.toggle("border-primary", active);
+      const chips = [...document.querySelectorAll(".chip")];
+      const cards = [...document.querySelectorAll(".card")];
+      function filter(tag) {
+        chips.forEach((c) => {
+          const active = c.dataset.filter === tag;
+          c.classList.toggle("bg-brand", active);
+          c.classList.toggle("text-white", active);
+          c.classList.toggle("border-brand", active);
         });
-
-        featureCards.forEach((card) => {
-          const tag = card.dataset.tag;
-          card.classList.toggle("hidden", !(filter === "all" || tag === filter));
+        cards.forEach((card) => {
+          const ok = tag === "all" || card.dataset.tag === tag;
+          card.classList.toggle("hidden", !ok);
         });
       }
-      document.getElementById("featureFilters").addEventListener("click", (e) => {
-        const btn = e.target.closest(".feature-filter");
+      document.getElementById("filters").addEventListener("click", (e) => {
+        const btn = e.target.closest(".chip");
         if (!btn) return;
-        setFeatureFilter(btn.dataset.filter);
+        filter(btn.dataset.filter);
       });
-      setFeatureFilter("all");
-
-      const archTabs = document.querySelectorAll(".arch-tab");
-      const archPanels = document.querySelectorAll(".arch-panel");
-      function setArchTab(tabId) {
-        archTabs.forEach((tab) => {
-          const active = tab.dataset.tab === tabId;
-          tab.classList.toggle("bg-primarySoft", active);
-          tab.classList.toggle("border-primary", active);
-          tab.classList.toggle("text-primary", active);
-        });
-        archPanels.forEach((panel) => panel.classList.add("hidden"));
-        document.getElementById(tabId).classList.remove("hidden");
-      }
-      document.getElementById("archTabs").addEventListener("click", (e) => {
-        const tab = e.target.closest(".arch-tab");
-        if (!tab) return;
-        setArchTab(tab.dataset.tab);
-      });
-      setArchTab("runtime");
-
-      const targets = [
-        ["Linux", "amd64"],
-        ["Linux", "arm64"],
-        ["macOS", "amd64"],
-        ["macOS", "arm64"],
-        ["Windows", "amd64"],
-        ["Windows", "arm64"]
-      ];
-      const matrix = document.getElementById("releaseMatrix");
-      targets.forEach(([os, arch]) => {
-        const item = document.createElement("article");
-        item.className = "rounded-md border border-line bg-bg p-3";
-        item.innerHTML = `<p class=\"text-xs uppercase tracking-wide text-subtext\">${os}</p><p class=\"mt-1 text-base font-semibold\">${arch}</p><p class=\"mt-1 font-mono text-xs text-subtext\">zet-${os.toLowerCase()}-${arch}.tar.gz</p>`;
-        matrix.appendChild(item);
-      });
+      filter("all");
     </script>
   </body>
 </html>
