@@ -14,8 +14,8 @@
 - [ ] Add an in-app theme editor to write `theme.json` without manual file edits.
 - [ ] Replace basic ANSI stripping with full VT terminal emulation to perfectly handle commands like `clear`.
 - [ ] Add checksums/signatures for release artifacts and updater verification.
-- [ ] Implement SSH string paste import (`ssh user@host -p 22`) directly in dashboard.
-- [ ] Replace tunnel-builder placeholder with real local/remote/dynamic forwarding runtime + health indicators.
+- [x] Implement SSH string paste import (`ssh user@host -p 22`) directly in dashboard.
+- [x] Replace tunnel-builder placeholder with real local/remote/dynamic forwarding runtime + health indicators.
 - [ ] Implement command palette actions (execute selected actions, not just list items).
 - [ ] Add transparent command log pane with collapsible UI and JSONL persistence.
 - [ ] Theme changer

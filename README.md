@@ -5,6 +5,7 @@ A modern keyboard-driven SSH workspace in your terminal: profiles, secure auth, 
 ## Features
 
 - Profile manager with create/edit and `~/.ssh/config` import
+- Paste-import profile from SSH command (`ssh user@host -p 22`)
 - Per-profile SSH agent forwarding toggle
 - Secure SSH host key verification via `known_hosts`
 - Multi-session SSH tabs with quick switching
@@ -49,6 +50,7 @@ zet update --check   # only check for updates
 - Dashboard: `[n]` new profile, `[e]` edit profile, `[i]` import `~/.ssh/config`, `[Enter]` connect
 - Global: `Ctrl+K` command palette
 - Session: `[Alt+1..9]` jump tabs, `[` / `]` switch tabs, `Ctrl+W` close tab
+- Tunnels: `Ctrl+T` tunnel manager, `a` add, `space` start/stop, `d` delete
 - File mode: `Ctrl+F` toggle, `Tab` switch pane, `c` copy, `o` preview, `x` cancel transfer
 
 ## Under The Hood
