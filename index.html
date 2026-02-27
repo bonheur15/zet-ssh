@@ -3,160 +3,170 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Zet-SSH</title>
-    <meta name="description" content="Open-source SSH workspace for terminal-first teams." />
+    <title>Zet-SSH | Easy SSH, Done Right</title>
+    <meta name="description" content="Manage SSH profiles, tunnels, and remote files without hassle. Open source and terminal-first." />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              bg: "#f3f4ee",
-              text: "#171d22",
-              sub: "#4c5d69",
-              line: "#cfd8df",
-              brand: "#0e8a78",
-              brandSoft: "#dff4ef",
+              bg: "#f6f7f4",
+              ink: "#1e2a2f",
+              muted: "#5a6c74",
+              line: "#d8e1e5",
+              brand: "#117a71",
+              brandSoft: "#dbf3ef",
               panel: "#ffffff",
-              dark: "#15242d"
+              dark: "#152126"
             },
             fontFamily: {
-              sans: ["Sora", "sans-serif"],
-              mono: ["JetBrains Mono", "monospace"]
+              sans: ["Outfit", "sans-serif"],
+              mono: ["Space Mono", "monospace"]
             },
             boxShadow: {
-              soft: "0 14px 28px rgba(21,36,45,0.08)"
+              soft: "0 12px 28px rgba(21,33,38,0.10)"
             }
           }
         }
       };
     </script>
+
+    <style>
+      .float {
+        animation: float 4s ease-in-out infinite;
+      }
+      .pulse-glow {
+        animation: pulseGlow 2.4s ease-in-out infinite;
+      }
+      .reveal {
+        opacity: 0;
+        transform: translateY(14px);
+        transition: all 0.6s ease;
+      }
+      .reveal.show {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      @keyframes pulseGlow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(17, 122, 113, 0.25); }
+        50% { box-shadow: 0 0 0 12px rgba(17, 122, 113, 0); }
+      }
+    </style>
   </head>
-  <body class="bg-bg text-text antialiased">
-    <main class="mx-auto max-w-6xl px-6 py-8 lg:px-10 lg:py-10">
-      <section class="grid gap-5 lg:grid-cols-[1.25fr_0.75fr]">
-        <article class="rounded-2xl border border-line bg-panel p-8 shadow-soft">
-          <div class="mb-8 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="grid h-10 w-10 place-items-center rounded-md bg-brand font-bold text-white">Z</div>
-              <div>
-                <p class="text-sm font-bold">Zet-SSH</p>
-                <p class="text-xs text-sub">Open Source · MIT</p>
-              </div>
+
+  <body class="bg-bg text-ink antialiased">
+    <main class="mx-auto max-w-6xl px-6 py-8 lg:px-10 lg:py-12">
+      <header class="mb-6 rounded-2xl border border-line bg-panel p-4 shadow-soft lg:p-5 reveal">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="grid h-10 w-10 place-items-center rounded-md bg-brand font-bold text-white">Z</div>
+            <div>
+              <p class="text-sm font-bold">Zet-SSH</p>
+              <p class="text-xs text-muted">Open Source SSH Workspace</p>
             </div>
-            <a href="https://github.com/bonheur15/zet-ssh" target="_blank" rel="noreferrer" class="rounded-md border border-line px-3 py-2 text-xs font-semibold hover:bg-bg">GitHub</a>
           </div>
+          <a href="https://github.com/bonheur15/zet-ssh" target="_blank" rel="noreferrer" class="rounded-md border border-line px-3 py-2 text-xs font-semibold hover:bg-bg">
+            GitHub
+          </a>
+        </div>
+      </header>
 
-          <h1 class="max-w-2xl text-4xl font-extrabold leading-tight lg:text-5xl">
-            Sharp SSH workflows.
-            <span class="block text-brand">One terminal workspace.</span>
+      <section class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+        <article class="rounded-2xl border border-line bg-panel p-7 shadow-soft reveal">
+          <p class="inline-flex rounded-full bg-brandSoft px-3 py-1 text-xs font-semibold text-brand">Easy SSH Management</p>
+          <h1 class="mt-4 text-4xl font-extrabold leading-tight lg:text-5xl">
+            Manage servers.
+            <span class="block text-brand">No hassle.</span>
           </h1>
-
-          <p class="mt-5 max-w-xl text-sm text-sub lg:text-base">
-            Profiles, vault, SFTP, tunnels, tabs, updates.
+          <p class="mt-4 max-w-xl text-base text-muted">
+            Save profiles, run tunnels, transfer files, and connect fast from one clean terminal app.
           </p>
 
-          <div class="mt-7 flex flex-wrap gap-3">
-            <button id="copyInstall" class="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#0b6e60]">Copy Install</button>
-            <a href="#grid" class="rounded-md border border-line px-4 py-2 text-sm font-semibold hover:bg-bg">See Features</a>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <button id="copyInstall" class="pulse-glow rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-[#0e665f]">
+              Copy Install
+            </button>
+            <a href="#features" class="rounded-md border border-line px-4 py-2 text-sm font-semibold hover:bg-bg">See Features</a>
           </div>
-          <p id="copyStatus" class="mt-3 text-xs text-sub"></p>
+          <p id="copyStatus" class="mt-2 text-xs text-muted"></p>
+
+          <div class="mt-6 grid gap-2 text-sm sm:grid-cols-2">
+            <div class="rounded-md border border-line bg-bg px-3 py-2">`zet connect <name>`</div>
+            <div class="rounded-md border border-line bg-bg px-3 py-2">`zet run <name> -- <cmd>`</div>
+          </div>
         </article>
 
-        <article class="rounded-2xl border border-dark bg-dark p-6 text-white shadow-soft">
-          <p class="font-mono text-xs text-[#8db2c2]">$ zet connect prod</p>
+        <article class="float rounded-2xl border border-dark bg-dark p-6 text-white shadow-soft reveal">
+          <p class="font-mono text-xs text-[#9ac3cf]">$ zet connect production</p>
           <div class="mt-4 rounded-lg border border-white/20 p-4 font-mono text-xs leading-6">
-            <p class="text-[#7ee0cd]">[connected] [sftp-ready] [tunnel-green]</p>
-            <p>deploy@10.0.0.50 ~</p>
-            <p class="text-[#7ee0cd]">❯ zet run prod -- uname -a</p>
+            <p class="text-[#77d7c4]">connected  |  sftp ready  |  tunnel healthy</p>
+            <p>deploy@10.0.0.50</p>
+            <p class="text-[#77d7c4]">❯ tunnel: L 5432 -> localhost:5432</p>
+            <p>❯ transfer: ./logs -> /var/log/app</p>
           </div>
-
-          <div class="mt-5 grid grid-cols-2 gap-2 text-center">
-            <div class="rounded-md bg-white/10 p-3">
-              <p class="text-xl font-bold">6</p>
-              <p class="text-[10px] uppercase tracking-wider text-[#9fbecc]">Release Targets</p>
-            </div>
-            <div class="rounded-md bg-white/10 p-3">
-              <p class="text-xl font-bold">3</p>
-              <p class="text-[10px] uppercase tracking-wider text-[#9fbecc]">Tunnel Modes</p>
-            </div>
+          <div class="mt-5 grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="rounded-md bg-white/10 p-2"><p class="text-lg font-bold">L</p><p class="text-[#aac6d0]">Local</p></div>
+            <div class="rounded-md bg-white/10 p-2"><p class="text-lg font-bold">R</p><p class="text-[#aac6d0]">Remote</p></div>
+            <div class="rounded-md bg-white/10 p-2"><p class="text-lg font-bold">D</p><p class="text-[#aac6d0]">Dynamic</p></div>
           </div>
         </article>
       </section>
 
-      <section id="grid" class="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
-        <article class="rounded-2xl border border-line bg-panel p-6 shadow-soft">
-          <h2 class="text-lg font-bold">CLI</h2>
-          <div class="mt-3 space-y-2 font-mono text-xs">
-            <div class="rounded-md border border-line bg-bg px-3 py-2">zet</div>
-            <div class="rounded-md border border-line bg-bg px-3 py-2">zet connect &lt;name&gt;</div>
-            <div class="rounded-md border border-line bg-bg px-3 py-2">zet run &lt;name&gt; -- &lt;cmd&gt;</div>
-            <div class="rounded-md border border-line bg-bg px-3 py-2">zet update</div>
-          </div>
+      <section id="features" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 reveal">
+        <article class="rounded-xl border border-line bg-panel p-4 shadow-soft">
+          <h2 class="font-semibold">Profiles</h2>
+          <p class="mt-1 text-sm text-muted">Create, edit, import, quick connect.</p>
         </article>
-
-        <article class="rounded-2xl border border-line bg-panel p-6 shadow-soft">
-          <div id="filters" class="mb-4 flex flex-wrap gap-2">
-            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="all">All</button>
-            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="core">Core</button>
-            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="secure">Secure</button>
-            <button class="chip rounded-full border border-line px-3 py-1 text-xs" data-filter="ops">Ops</button>
-          </div>
-
-          <div class="grid gap-2 sm:grid-cols-2" id="cards">
-            <div class="card rounded-md border border-line p-3" data-tag="core">Profiles + import</div>
-            <div class="card rounded-md border border-line p-3" data-tag="secure">known_hosts verify</div>
-            <div class="card rounded-md border border-line p-3" data-tag="secure">Vault + agent forward</div>
-            <div class="card rounded-md border border-line p-3" data-tag="ops">Dual-pane SFTP</div>
-            <div class="card rounded-md border border-line p-3" data-tag="ops">Recursive transfer</div>
-            <div class="card rounded-md border border-line p-3" data-tag="ops">L/R/D tunnels</div>
-            <div class="card rounded-md border border-line p-3" data-tag="ops">Release updater</div>
-            <div class="card rounded-md border border-line p-3" data-tag="core">Tabs + command palette</div>
-          </div>
+        <article class="rounded-xl border border-line bg-panel p-4 shadow-soft">
+          <h2 class="font-semibold">Security</h2>
+          <p class="mt-1 text-sm text-muted">known_hosts checks + encrypted vault.</p>
+        </article>
+        <article class="rounded-xl border border-line bg-panel p-4 shadow-soft">
+          <h2 class="font-semibold">File Ops</h2>
+          <p class="mt-1 text-sm text-muted">Dual pane, preview, recursive transfer.</p>
+        </article>
+        <article class="rounded-xl border border-line bg-panel p-4 shadow-soft">
+          <h2 class="font-semibold">Tunnels</h2>
+          <p class="mt-1 text-sm text-muted">Create and monitor L/R/D forwarding.</p>
         </article>
       </section>
 
-      <footer class="mt-5 rounded-2xl border border-line bg-panel p-5 text-xs text-sub shadow-soft">
-        Built from README + project docs. Open for contributors.
+      <footer class="mt-6 rounded-2xl border border-line bg-panel px-5 py-4 text-xs text-muted reveal">
+        Open source. MIT. Built for developers who stay in terminal.
       </footer>
     </main>
 
     <script>
       const install = "curl -fsSL https://raw.githubusercontent.com/bonheur15/zet-ssh/main/scripts/install.sh | sh";
+      const copyStatus = document.getElementById("copyStatus");
       document.getElementById("copyInstall").addEventListener("click", async () => {
-        const status = document.getElementById("copyStatus");
         try {
           await navigator.clipboard.writeText(install);
-          status.textContent = "Copied.";
+          copyStatus.textContent = "Copied.";
         } catch {
-          status.textContent = install;
+          copyStatus.textContent = install;
         }
       });
 
-      const chips = [...document.querySelectorAll(".chip")];
-      const cards = [...document.querySelectorAll(".card")];
-      function filter(tag) {
-        chips.forEach((c) => {
-          const active = c.dataset.filter === tag;
-          c.classList.toggle("bg-brand", active);
-          c.classList.toggle("text-white", active);
-          c.classList.toggle("border-brand", active);
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) entry.target.classList.add("show");
         });
-        cards.forEach((card) => {
-          const ok = tag === "all" || card.dataset.tag === tag;
-          card.classList.toggle("hidden", !ok);
-        });
-      }
-      document.getElementById("filters").addEventListener("click", (e) => {
-        const btn = e.target.closest(".chip");
-        if (!btn) return;
-        filter(btn.dataset.filter);
-      });
-      filter("all");
+      }, { threshold: 0.2 });
+      document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
     </script>
   </body>
 </html>
