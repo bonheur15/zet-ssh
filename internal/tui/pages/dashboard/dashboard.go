@@ -3,9 +3,11 @@ package dashboard
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"zet-ssh/internal/core/profiles"
 
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -19,10 +21,12 @@ func (i item) Description() string { return i.profile.User + "@" + i.profile.Hos
 func (i item) FilterValue() string { return i.profile.Name + " " + i.profile.Host }
 
 type Model struct {
-	list      list.Model
-	store     *profiles.Store
-	form      Form
-	statusMsg string
+	list       list.Model
+	store      *profiles.Store
+	form       Form
+	statusMsg  string
+	pasteOpen  bool
+	pasteInput textinput.Model
 }
 
 func New(store *profiles.Store) Model {
@@ -35,6 +39,9 @@ func New(store *profiles.Store) Model {
 		store: store,
 		form:  NewForm(),
 	}
+	m.pasteInput = textinput.New()
+	m.pasteInput.Placeholder = "Paste ssh command (e.g. ssh user@host -p 22 -i ~/.ssh/id_ed25519)"
+	m.pasteInput.CharLimit = 1024
 	m.reloadItems()
 	return m
 }
@@ -76,6 +83,41 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.form, cmd = m.form.Update(msg)
 		return m, cmd
 	}
+	if m.pasteOpen {
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.String() {
+			case "esc":
+				m.pasteOpen = false
+				m.pasteInput.SetValue("")
+				return m, nil
+			case "enter":
+				cmdText := strings.TrimSpace(m.pasteInput.Value())
+				if cmdText == "" {
+					m.statusMsg = "Paste import failed: empty command"
+					return m, nil
+				}
+				p, err := profiles.ParseSSHCommandProfile(cmdText)
+				if err != nil {
+					m.statusMsg = "Paste import failed: " + err.Error()
+					return m, nil
+				}
+				if err := m.store.Upsert(p); err != nil {
+					m.statusMsg = "Paste import failed: " + err.Error()
+					return m, nil
+				}
+				m.reloadItems()
+				m.selectProfileByID(p.ID)
+				m.pasteOpen = false
+				m.pasteInput.SetValue("")
+				m.statusMsg = "Imported profile from ssh command"
+				return m, nil
+			}
+		}
+		var cmd tea.Cmd
+		m.pasteInput, cmd = m.pasteInput.Update(msg)
+		return m, cmd
+	}
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -97,6 +139,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return i.profile
 				}
 			}
+		case "p":
+			m.pasteOpen = true
+			m.pasteInput.SetValue("")
+			m.pasteInput.Focus()
+			m.statusMsg = "Paste an ssh command and press Enter"
+			return m, nil
 		case "i":
 			home, err := os.UserHomeDir()
 			if err != nil {
@@ -135,14 +183,37 @@ func (m Model) View() string {
 				Padding(1).
 				Render(m.form.View()))
 	}
+	if m.pasteOpen {
+		content := lipgloss.JoinVertical(lipgloss.Left,
+			"Import SSH Command",
+			"",
+			m.pasteInput.View(),
+			"",
+			"(Enter import, Esc cancel)",
+		)
+		return lipgloss.Place(m.list.Width(), m.list.Height(),
+			lipgloss.Center, lipgloss.Center,
+			lipgloss.NewStyle().
+				BorderStyle(lipgloss.RoundedBorder()).
+				Padding(1).
+				Width(max(60, m.list.Width()-10)).
+				Render(content))
+	}
 
 	view := m.list.View()
 	if m.statusMsg != "" {
 		view = lipgloss.JoinVertical(lipgloss.Left, view, m.statusMsg)
 	}
-	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [i] Import ~/.ssh/config  [enter] Connect  (in form: Ctrl+S save, Ctrl+G save+connect)")
+	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [p] Paste ssh cmd  [i] Import ~/.ssh/config  [enter] Connect  (in form: Ctrl+S save, Ctrl+G save+connect)")
 
 	return lipgloss.NewStyle().Margin(1, 2).Render(view)
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (m *Model) reloadItems() {
