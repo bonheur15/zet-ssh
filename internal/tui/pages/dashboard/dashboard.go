@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"os"
+	"path/filepath"
 	"zet-ssh/internal/core/profiles"
 
 	"github.com/charmbracelet/bubbles/list"
@@ -95,6 +97,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return i.profile
 				}
 			}
+		case "i":
+			home, err := os.UserHomeDir()
+			if err != nil {
+				m.statusMsg = "Import failed: could not resolve home directory"
+				return m, nil
+			}
+			configPath := filepath.Join(home, ".ssh", "config")
+			imported, err := profiles.ImportSSHConfig(configPath)
+			if err != nil {
+				m.statusMsg = "Import failed: " + err.Error()
+				return m, nil
+			}
+			for _, p := range imported {
+				if upsertErr := m.store.Upsert(p); upsertErr != nil {
+					m.statusMsg = "Import failed: " + upsertErr.Error()
+					return m, nil
+				}
+			}
+			m.reloadItems()
+			m.statusMsg = "Imported profiles from ~/.ssh/config"
+			return m, nil
 		}
 	}
 
@@ -117,7 +140,7 @@ func (m Model) View() string {
 	if m.statusMsg != "" {
 		view = lipgloss.JoinVertical(lipgloss.Left, view, m.statusMsg)
 	}
-	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [enter] Connect  (in form: Ctrl+S save, Ctrl+G save+connect)")
+	view = lipgloss.JoinVertical(lipgloss.Left, view, "[n] New  [e] Edit  [i] Import ~/.ssh/config  [enter] Connect  (in form: Ctrl+S save, Ctrl+G save+connect)")
 
 	return lipgloss.NewStyle().Margin(1, 2).Render(view)
 }

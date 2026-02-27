@@ -18,6 +18,8 @@ type Form struct {
 	host       textinput.Model
 	user       textinput.Model
 	port       textinput.Model
+	authType   textinput.Model
+	keyPath    textinput.Model
 	focusIndex int
 	active     bool
 	editing    bool
@@ -53,6 +55,8 @@ func NewFormForProfile(p profiles.Profile) Form {
 	if p.Port > 0 {
 		f.port.SetValue(strconv.Itoa(p.Port))
 	}
+	f.authType.SetValue(string(p.AuthType))
+	f.keyPath.SetValue(p.KeyPath)
 	return f
 }
 
@@ -83,10 +87,21 @@ func (f *Form) initInputs() {
 	p.Placeholder = "Port (default 22)"
 	p.CharLimit = 5
 
+	a := textinput.New()
+	a.Placeholder = "Auth Type (agent|key|password)"
+	a.CharLimit = 20
+	a.SetValue(string(profiles.AuthAgent))
+
+	k := textinput.New()
+	k.Placeholder = "Key Path (required when auth type is key)"
+	k.CharLimit = 1024
+
 	f.name = n
 	f.host = h
 	f.user = u
 	f.port = p
+	f.authType = a
+	f.keyPath = k
 }
 
 func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
@@ -126,19 +141,19 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 				f.focusIndex++
 			}
 
-			if f.focusIndex > 3 {
+			if f.focusIndex > 5 {
 				f.focusIndex = 0
 			} else if f.focusIndex < 0 {
-				f.focusIndex = 3
+				f.focusIndex = 5
 			}
 			cmds = append(cmds, f.updateFocus())
 		case "enter":
-			if f.focusIndex == 3 {
+			if f.focusIndex == 5 {
 				return submit(saveOnly)
 			}
 			f.focusIndex++
-			if f.focusIndex > 3 {
-				f.focusIndex = 3
+			if f.focusIndex > 5 {
+				f.focusIndex = 5
 			}
 			cmds = append(cmds, f.updateFocus())
 		}
@@ -153,6 +168,10 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 	cmds = append(cmds, cmd)
 	f.port, cmd = f.port.Update(msg)
 	cmds = append(cmds, cmd)
+	f.authType, cmd = f.authType.Update(msg)
+	cmds = append(cmds, cmd)
+	f.keyPath, cmd = f.keyPath.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return f, tea.Batch(cmds...)
 }
@@ -162,6 +181,8 @@ func (f *Form) updateFocus() tea.Cmd {
 	f.host.Blur()
 	f.user.Blur()
 	f.port.Blur()
+	f.authType.Blur()
+	f.keyPath.Blur()
 
 	switch f.focusIndex {
 	case 0:
@@ -172,6 +193,10 @@ func (f *Form) updateFocus() tea.Cmd {
 		return f.user.Focus()
 	case 3:
 		return f.port.Focus()
+	case 4:
+		return f.authType.Focus()
+	case 5:
+		return f.keyPath.Focus()
 	}
 	return nil
 }
@@ -181,6 +206,8 @@ func (f Form) buildProfile() (profiles.Profile, error) {
 	host := strings.TrimSpace(f.host.Value())
 	user := strings.TrimSpace(f.user.Value())
 	portStr := strings.TrimSpace(f.port.Value())
+	authTypeStr := strings.TrimSpace(f.authType.Value())
+	keyPath := strings.TrimSpace(f.keyPath.Value())
 
 	if name == "" {
 		return profiles.Profile{}, fmt.Errorf("name is required")
@@ -200,6 +227,13 @@ func (f Form) buildProfile() (profiles.Profile, error) {
 		}
 		port = p
 	}
+	authType, err := profiles.ParseAuthType(authTypeStr)
+	if err != nil {
+		return profiles.Profile{}, err
+	}
+	if authType == profiles.AuthKey && keyPath == "" {
+		return profiles.Profile{}, fmt.Errorf("key path is required when auth type is key")
+	}
 
 	id := f.id
 	if id == "" {
@@ -212,7 +246,8 @@ func (f Form) buildProfile() (profiles.Profile, error) {
 		Host:     host,
 		User:     user,
 		Port:     port,
-		AuthType: profiles.AuthAgent,
+		AuthType: authType,
+		KeyPath:  keyPath,
 	}, nil
 }
 
@@ -238,6 +273,8 @@ func (f Form) View() string {
 		f.host.View(),
 		f.user.View(),
 		f.port.View(),
+		f.authType.View(),
+		f.keyPath.View(),
 		"",
 		errLine,
 		"(Ctrl+S save, Ctrl+G save & connect, Enter on port saves, Esc cancels)",

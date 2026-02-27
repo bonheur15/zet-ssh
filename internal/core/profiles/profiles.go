@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -27,6 +28,19 @@ type Profile struct {
 	VaultKeyID  string   `json:"vault_key_id,omitempty"`
 	VaultPassID string   `json:"vault_pass_id,omitempty"`
 	Tags        []string `json:"tags"`
+}
+
+func ParseAuthType(v string) (AuthType, error) {
+	switch AuthType(strings.ToLower(strings.TrimSpace(v))) {
+	case AuthAgent:
+		return AuthAgent, nil
+	case AuthKey:
+		return AuthKey, nil
+	case AuthPassword:
+		return AuthPassword, nil
+	default:
+		return "", fmt.Errorf("auth type must be one of: agent, key, password")
+	}
 }
 
 type Store struct {

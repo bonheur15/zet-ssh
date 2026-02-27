@@ -720,12 +720,23 @@ func buildAuthMethods(profile profiles.Profile, runtimePassword string) ([]sshli
 			}
 		}
 	}
-	// Always prioritize key-based auth first (profile key, local private keys, agent).
-	addProfileKey()
-	addDefaultKeys()
-	addAgent()
+	switch profile.AuthType {
+	case profiles.AuthPassword:
+		// Password-only profile type.
+	case profiles.AuthKey:
+		// Key-first profile type.
+		addProfileKey()
+		addAgent()
+	case profiles.AuthAgent:
+		fallthrough
+	default:
+		// Agent/default-keys profile type.
+		addProfileKey()
+		addDefaultKeys()
+		addAgent()
+	}
 
-	// Password fallback is always appended last.
+	// Password fallback is appended when available.
 	if strings.TrimSpace(password) != "" {
 		methods = append(methods, ssh.PasswordAuth(password))
 		methods = append(methods, ssh.KeyboardInteractiveAuth(password))
