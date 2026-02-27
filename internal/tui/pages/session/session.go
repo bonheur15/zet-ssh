@@ -519,22 +519,21 @@ func (m *Model) startTransfer() tea.Cmd {
 		if !ok || item.IsParent {
 			return func() tea.Msg { return transferUpdateMsg{done: true, err: fmt.Errorf("select a local file first")} }
 		}
-		if item.Info.IsDir() {
-			return func() tea.Msg {
-				return transferUpdateMsg{done: true, err: fmt.Errorf("directory copy is not implemented yet")}
-			}
-		}
 
 		localPath, _ := m.localBrowser.SelectedPath()
 		remotePath := path.Join(m.remoteBrowser.CurrentPath(), item.Info.Name())
 		label = fmt.Sprintf("Uploading %s", filepath.Base(localPath))
 
 		run = func(ch chan tea.Msg, cancel <-chan struct{}) {
-			err := m.sftpClient.UploadWithProgress(localPath, remotePath, func(copied, total int64) {
+			var finalCopied int64
+			var finalTotal int64
+			err := m.sftpClient.UploadPathWithProgress(localPath, remotePath, func(copied, total int64) {
+				finalCopied = copied
+				finalTotal = total
 				ch <- transferUpdateMsg{label: label, copied: copied, total: total}
 			}, cancel)
 
-			final := transferUpdateMsg{label: label, done: true, copied: m.transferCopied, total: m.transferTotal}
+			final := transferUpdateMsg{label: label, done: true, copied: finalCopied, total: finalTotal}
 			if err != nil {
 				if strings.Contains(strings.ToLower(err.Error()), "cancel") {
 					final.aborted = true
@@ -550,22 +549,21 @@ func (m *Model) startTransfer() tea.Cmd {
 		if !ok || item.IsParent {
 			return func() tea.Msg { return transferUpdateMsg{done: true, err: fmt.Errorf("select a remote file first")} }
 		}
-		if item.Info.IsDir() {
-			return func() tea.Msg {
-				return transferUpdateMsg{done: true, err: fmt.Errorf("directory copy is not implemented yet")}
-			}
-		}
 
 		remotePath, _ := m.remoteBrowser.SelectedPath()
 		localPath := filepath.Join(m.localBrowser.CurrentPath(), item.Info.Name())
 		label = fmt.Sprintf("Downloading %s", path.Base(remotePath))
 
 		run = func(ch chan tea.Msg, cancel <-chan struct{}) {
-			err := m.sftpClient.DownloadWithProgress(remotePath, localPath, func(copied, total int64) {
+			var finalCopied int64
+			var finalTotal int64
+			err := m.sftpClient.DownloadPathWithProgress(remotePath, localPath, func(copied, total int64) {
+				finalCopied = copied
+				finalTotal = total
 				ch <- transferUpdateMsg{label: label, copied: copied, total: total}
 			}, cancel)
 
-			final := transferUpdateMsg{label: label, done: true, copied: m.transferCopied, total: m.transferTotal}
+			final := transferUpdateMsg{label: label, done: true, copied: finalCopied, total: finalTotal}
 			if err != nil {
 				if strings.Contains(strings.ToLower(err.Error()), "cancel") {
 					final.aborted = true
