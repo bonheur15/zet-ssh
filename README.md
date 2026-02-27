@@ -50,6 +50,80 @@ zet update --check   # only check for updates
 - Session: `[Alt+1..9]` jump tabs, `[` / `]` switch tabs, `Ctrl+W` close tab
 - File mode: `Ctrl+F` toggle, `Tab` switch pane, `c` copy, `o` preview, `x` cancel transfer
 
+## Under The Hood
+
+### Tech Stack
+
+- Language/runtime: Go
+- TUI framework: Bubble Tea + Bubbles
+- Styling: Lip Gloss
+- SSH: `golang.org/x/crypto/ssh`
+- File transfer: `github.com/pkg/sftp`
+- Vault crypto: Argon2id + ChaCha20-Poly1305
+
+### Runtime Architecture
+
+- `cmd/zet/main.go` is the entrypoint for TUI mode and CLI commands (`help`, `version`, `update`).
+- `internal/tui/root.go` is the app state machine:
+  - Dashboard state for profile management
+  - Session state for active SSH tabs
+  - Global overlays (palette, vault unlock modal)
+- `internal/tui/pages/session/session.go` owns one SSH workspace tab:
+  - Terminal viewport rendering
+  - SSH stream read/write loop
+  - Dual-pane file mode
+  - Transfer progress and cancellation channel
+
+### Connection Flow
+
+1. User selects a profile on dashboard.
+2. Session builder assembles auth methods from profile + environment.
+3. SSH connects with strict host key validation (`known_hosts` callback).
+4. PTY shell starts with resize support.
+5. SFTP client is attached to the same SSH client for file operations.
+
+### Auth Method Resolution
+
+- `auth_type=agent`: profile/default keys + agent, optional password fallback.
+- `auth_type=key`: profile key path + agent, optional password fallback.
+- `auth_type=password`: password/keyboard-interactive only.
+- Runtime password prompt appears on auth failure and retries the connection.
+
+### File Browser and Transfer Engine
+
+- Local and remote panes share a unified browser model (`FileBrowser`).
+- Copy action (`c`) runs direction-aware transfer:
+  - Local -> Remote: upload
+  - Remote -> Local: download
+- Directories transfer recursively with aggregate byte progress.
+- Cancellation is cooperative via a cancel channel checked inside copy loops.
+
+### Data and Config Layout
+
+Stored under `~/.config/zet-ssh/`:
+
+- `profiles.json`: saved SSH profile definitions
+- `theme.json`: optional color/theme overrides
+- `vault.zet`: encrypted vault payload
+- `known_hosts`: optional app-local host key trust file
+
+### Update System
+
+- `zet update` calls GitHub Releases API for latest version.
+- It selects the matching `GOOS/GOARCH` tarball.
+- Downloads and extracts `zet` binary.
+- Replaces current executable atomically via temp file + rename.
+- `ZET_SSH_AUTO_UPDATE=1` runs the same update check before launching TUI.
+
+### Release Pipeline
+
+- CI workflow: runs `go test ./...` and build checks on pushes/PRs.
+- Release workflow (tag `v*`):
+  - Cross-compiles Linux/macOS/Windows (`amd64`, `arm64`)
+  - Packs `zet-<os>-<arch>.tar.gz`
+  - Publishes assets to GitHub Release
+- Installer script and updater both consume these release assets.
+
 ## Security
 
 - SSH host keys are validated using:
