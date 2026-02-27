@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-REPO="${ZET_SSH_REPOSITORY:-bonheur/zet-ssh-4}"
+REPO="${ZET_SSH_REPOSITORY:-bonheur15/zet-ssh}"
 VERSION="${1:-latest}"
 
 os="$(uname -s | tr '[:upper:]' '[:lower:]')"

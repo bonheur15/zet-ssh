@@ -18,13 +18,13 @@ A modern keyboard-driven SSH workspace in your terminal: profiles, secure auth, 
 Quick install (auto-detect OS/arch and fetch latest GitHub release):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bonheur/zet-ssh-4/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/bonheur15/zet-ssh/main/scripts/install.sh | sh
 ```
 
 Install a specific version tag:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/bonheur/zet-ssh-4/main/scripts/install.sh | sh -s -- v0.1.0
+curl -fsSL https://raw.githubusercontent.com/bonheur15/zet-ssh/main/scripts/install.sh | sh -s -- v0.1.0
 ```
 
 ## Build From Source
@@ -63,7 +63,7 @@ zet update --check   # only check for updates
 
 Environment variables:
 
-- `ZET_SSH_REPOSITORY` (default: `bonheur/zet-ssh-4`)
+- `ZET_SSH_REPOSITORY` (default: `bonheur15/zet-ssh`)
 - `ZET_SSH_AUTO_UPDATE=1` to run updater before launching TUI
 
 Example:

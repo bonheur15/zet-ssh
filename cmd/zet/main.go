@@ -31,7 +31,7 @@ func runAutoUpdateIfEnabled() {
 
 	repo := os.Getenv("ZET_SSH_REPOSITORY")
 	if strings.TrimSpace(repo) == "" {
-		repo = "bonheur/zet-ssh-4"
+		repo = "bonheur15/zet-ssh"
 	}
 
 	_ = update.Run(update.Options{
@@ -52,7 +52,7 @@ func runCLICommand(args []string) bool {
 	case "update":
 		repo := os.Getenv("ZET_SSH_REPOSITORY")
 		if strings.TrimSpace(repo) == "" {
-			repo = "bonheur/zet-ssh-4"
+			repo = "bonheur15/zet-ssh"
 		}
 
 		opts := update.Options{
@@ -82,7 +82,7 @@ func runCLICommand(args []string) bool {
 		fmt.Println("  zet update --check # only check for newer release")
 		fmt.Println("")
 		fmt.Println("Environment:")
-		fmt.Println("  ZET_SSH_REPOSITORY=<owner/repo>  release repository (default: bonheur/zet-ssh-4)")
+		fmt.Println("  ZET_SSH_REPOSITORY=<owner/repo>  release repository (default: bonheur15/zet-ssh)")
 		return true
 	default:
 		return false
