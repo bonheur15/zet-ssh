@@ -1,6 +1,6 @@
 # Zet-SSH
 
-A modern keyboard-driven SSH workspace in your terminal: profiles, secure auth, multi-session tabs, file transfer, and release-driven updates.
+A modern keyboard driven SSH workspace in your terminal: profiles, secure auth, multi session tabs, file transfer, and release driven updates.
 
 ## Features
 
