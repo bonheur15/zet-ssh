@@ -143,6 +143,13 @@ func (m Model) connectCmd(password string) tea.Cmd {
 			return sshErrorMsg(err)
 		}
 
+		if m.profile.AgentForward {
+			if err := s.EnableAgentForwarding(); err != nil {
+				s.Close()
+				return sshErrorMsg(fmt.Errorf("agent forwarding setup failed: %w", err))
+			}
+		}
+
 		if err := s.StartShell(m.width, m.height-3); err != nil {
 			s.Close()
 			return sshErrorMsg(err)

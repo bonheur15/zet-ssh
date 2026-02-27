@@ -18,16 +18,17 @@ const (
 )
 
 type Profile struct {
-	ID          string   `json:"id"`
-	Name        string   `json:"name"`
-	Host        string   `json:"host"`
-	Port        int      `json:"port"`
-	User        string   `json:"user"`
-	AuthType    AuthType `json:"auth_type"`
-	KeyPath     string   `json:"key_path,omitempty"`
-	VaultKeyID  string   `json:"vault_key_id,omitempty"`
-	VaultPassID string   `json:"vault_pass_id,omitempty"`
-	Tags        []string `json:"tags"`
+	ID           string   `json:"id"`
+	Name         string   `json:"name"`
+	Host         string   `json:"host"`
+	Port         int      `json:"port"`
+	User         string   `json:"user"`
+	AuthType     AuthType `json:"auth_type"`
+	AgentForward bool     `json:"agent_forward,omitempty"`
+	KeyPath      string   `json:"key_path,omitempty"`
+	VaultKeyID   string   `json:"vault_key_id,omitempty"`
+	VaultPassID  string   `json:"vault_pass_id,omitempty"`
+	Tags         []string `json:"tags"`
 }
 
 func ParseAuthType(v string) (AuthType, error) {

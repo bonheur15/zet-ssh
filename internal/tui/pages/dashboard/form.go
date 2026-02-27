@@ -20,6 +20,7 @@ type Form struct {
 	port       textinput.Model
 	authType   textinput.Model
 	keyPath    textinput.Model
+	agentFwd   textinput.Model
 	focusIndex int
 	active     bool
 	editing    bool
@@ -57,6 +58,11 @@ func NewFormForProfile(p profiles.Profile) Form {
 	}
 	f.authType.SetValue(string(p.AuthType))
 	f.keyPath.SetValue(p.KeyPath)
+	if p.AgentForward {
+		f.agentFwd.SetValue("true")
+	} else {
+		f.agentFwd.SetValue("false")
+	}
 	return f
 }
 
@@ -96,12 +102,18 @@ func (f *Form) initInputs() {
 	k.Placeholder = "Key Path (required when auth type is key)"
 	k.CharLimit = 1024
 
+	af := textinput.New()
+	af.Placeholder = "Agent Forward (true|false)"
+	af.CharLimit = 10
+	af.SetValue("false")
+
 	f.name = n
 	f.host = h
 	f.user = u
 	f.port = p
 	f.authType = a
 	f.keyPath = k
+	f.agentFwd = af
 }
 
 func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
@@ -141,19 +153,19 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 				f.focusIndex++
 			}
 
-			if f.focusIndex > 5 {
+			if f.focusIndex > 6 {
 				f.focusIndex = 0
 			} else if f.focusIndex < 0 {
-				f.focusIndex = 5
+				f.focusIndex = 6
 			}
 			cmds = append(cmds, f.updateFocus())
 		case "enter":
-			if f.focusIndex == 5 {
+			if f.focusIndex == 6 {
 				return submit(saveOnly)
 			}
 			f.focusIndex++
-			if f.focusIndex > 5 {
-				f.focusIndex = 5
+			if f.focusIndex > 6 {
+				f.focusIndex = 6
 			}
 			cmds = append(cmds, f.updateFocus())
 		}
@@ -172,6 +184,8 @@ func (f Form) Update(msg tea.Msg) (Form, tea.Cmd) {
 	cmds = append(cmds, cmd)
 	f.keyPath, cmd = f.keyPath.Update(msg)
 	cmds = append(cmds, cmd)
+	f.agentFwd, cmd = f.agentFwd.Update(msg)
+	cmds = append(cmds, cmd)
 
 	return f, tea.Batch(cmds...)
 }
@@ -183,6 +197,7 @@ func (f *Form) updateFocus() tea.Cmd {
 	f.port.Blur()
 	f.authType.Blur()
 	f.keyPath.Blur()
+	f.agentFwd.Blur()
 
 	switch f.focusIndex {
 	case 0:
@@ -197,6 +212,8 @@ func (f *Form) updateFocus() tea.Cmd {
 		return f.authType.Focus()
 	case 5:
 		return f.keyPath.Focus()
+	case 6:
+		return f.agentFwd.Focus()
 	}
 	return nil
 }
@@ -208,6 +225,7 @@ func (f Form) buildProfile() (profiles.Profile, error) {
 	portStr := strings.TrimSpace(f.port.Value())
 	authTypeStr := strings.TrimSpace(f.authType.Value())
 	keyPath := strings.TrimSpace(f.keyPath.Value())
+	agentFwdStr := strings.TrimSpace(f.agentFwd.Value())
 
 	if name == "" {
 		return profiles.Profile{}, fmt.Errorf("name is required")
@@ -234,6 +252,10 @@ func (f Form) buildProfile() (profiles.Profile, error) {
 	if authType == profiles.AuthKey && keyPath == "" {
 		return profiles.Profile{}, fmt.Errorf("key path is required when auth type is key")
 	}
+	agentFwd, err := parseBool(agentFwdStr)
+	if err != nil {
+		return profiles.Profile{}, fmt.Errorf("agent forward must be true or false")
+	}
 
 	id := f.id
 	if id == "" {
@@ -241,13 +263,14 @@ func (f Form) buildProfile() (profiles.Profile, error) {
 	}
 
 	return profiles.Profile{
-		ID:       id,
-		Name:     name,
-		Host:     host,
-		User:     user,
-		Port:     port,
-		AuthType: authType,
-		KeyPath:  keyPath,
+		ID:           id,
+		Name:         name,
+		Host:         host,
+		User:         user,
+		Port:         port,
+		AuthType:     authType,
+		KeyPath:      keyPath,
+		AgentForward: agentFwd,
 	}, nil
 }
 
@@ -275,8 +298,20 @@ func (f Form) View() string {
 		f.port.View(),
 		f.authType.View(),
 		f.keyPath.View(),
+		f.agentFwd.View(),
 		"",
 		errLine,
 		"(Ctrl+S save, Ctrl+G save & connect, Enter on port saves, Esc cancels)",
 	)
+}
+
+func parseBool(v string) (bool, error) {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "true", "1", "yes", "y", "on":
+		return true, nil
+	case "false", "0", "no", "n", "off", "":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid boolean")
+	}
 }

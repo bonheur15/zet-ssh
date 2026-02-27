@@ -16,11 +16,12 @@ import (
 )
 
 type Session struct {
-	client  *ssh.Client
-	session *ssh.Session
-	stdin   io.WriteCloser
-	stdout  io.Reader
-	stderr  io.Reader
+	client    *ssh.Client
+	session   *ssh.Session
+	stdin     io.WriteCloser
+	stdout    io.Reader
+	stderr    io.Reader
+	agentConn io.Closer
 }
 
 func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, error) {
@@ -149,6 +150,9 @@ func (s *Session) Wait() error {
 }
 
 func (s *Session) Close() {
+	if s.agentConn != nil {
+		_ = s.agentConn.Close()
+	}
 	s.session.Close()
 	s.client.Close()
 }
@@ -160,6 +164,32 @@ func (s *Session) Resize(width, height int) error {
 // Client returns the underlying SSH client for operations like SFTP.
 func (s *Session) Client() *ssh.Client {
 	return s.client
+}
+
+// EnableAgentForwarding forwards the local SSH agent into this remote session.
+func (s *Session) EnableAgentForwarding() error {
+	socket := os.Getenv("SSH_AUTH_SOCK")
+	if socket == "" {
+		return fmt.Errorf("SSH_AUTH_SOCK is not set")
+	}
+
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		return err
+	}
+
+	agentClient := agent.NewClient(conn)
+	if err := agent.ForwardToAgent(s.client, agentClient); err != nil {
+		_ = conn.Close()
+		return err
+	}
+	if err := agent.RequestAgentForwarding(s.session); err != nil {
+		_ = conn.Close()
+		return err
+	}
+
+	s.agentConn = conn
+	return nil
 }
 
 // PasswordAuth returns an auth method using the provided password.
