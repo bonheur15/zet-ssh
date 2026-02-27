@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+	"golang.org/x/crypto/ssh/knownhosts"
 )
 
 type Session struct {
@@ -23,10 +24,15 @@ type Session struct {
 }
 
 func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, error) {
+	hostKeyCallback, err := HostKeyCallbackFromKnownHosts(DefaultKnownHostsFiles()...)
+	if err != nil {
+		return nil, err
+	}
+
 	config := &ssh.ClientConfig{
 		User:            user,
 		Auth:            auth,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         10 * time.Second,
 	}
 
@@ -70,6 +76,46 @@ func Connect(user, host string, port int, auth []ssh.AuthMethod) (*Session, erro
 		stdout:  stdout,
 		stderr:  stderr,
 	}, nil
+}
+
+// DefaultKnownHostsFiles returns preferred known_hosts files in search order.
+func DefaultKnownHostsFiles() []string {
+	var files []string
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return files
+	}
+
+	candidates := []string{
+		filepath.Join(home, ".config", "zet-ssh", "known_hosts"),
+		filepath.Join(home, ".ssh", "known_hosts"),
+	}
+
+	for _, p := range candidates {
+		if info, statErr := os.Stat(p); statErr == nil && !info.IsDir() {
+			files = append(files, p)
+		}
+	}
+
+	return files
+}
+
+// HostKeyCallbackFromKnownHosts creates a strict host-key callback from one or more files.
+func HostKeyCallbackFromKnownHosts(files ...string) (ssh.HostKeyCallback, error) {
+	var existing []string
+	for _, f := range files {
+		if strings.TrimSpace(f) == "" {
+			continue
+		}
+		if info, err := os.Stat(f); err == nil && !info.IsDir() {
+			existing = append(existing, f)
+		}
+	}
+	if len(existing) == 0 {
+		return nil, fmt.Errorf("no known_hosts file found (expected ~/.config/zet-ssh/known_hosts or ~/.ssh/known_hosts)")
+	}
+	return knownhosts.New(existing...)
 }
 
 func (s *Session) StartShell(width, height int) error {
