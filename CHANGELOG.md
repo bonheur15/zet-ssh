@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **README Internals:** Added a full "Under The Hood" section documenting runtime architecture, data flow, updater behavior, and release pipeline.
 - **SSH Command Paste Import:** Added dashboard paste-import flow (`p`) for commands like `ssh user@host -p 22`.
 - **Tunnel Runtime:** Added in-session tunnel manager (`Ctrl+T`) with start/stop/delete controls for local (`L`), remote (`R`), and dynamic SOCKS5 (`D`) forwarding.
+- **CLI Connect/Run:** Added `zet connect <name>` and `zet run <name> -- <command>` for direct session boot and headless remote execution.
 
 ### Changed
 - **Repository Defaults:** Updated installer and updater default repository references to `bonheur15/zet-ssh`.

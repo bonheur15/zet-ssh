@@ -40,6 +40,8 @@ go build -o zet ./cmd/zet
 ```bash
 zet                  # open TUI
 zet help             # show CLI help
+zet connect prod     # open TUI and jump directly into profile session
+zet run prod -- uname -a  # execute remote command and exit
 zet version          # show build version
 zet update           # update to latest release
 zet update --check   # only check for updates
