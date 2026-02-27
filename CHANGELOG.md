@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### ✨ Added
+- **SSH Agent Forwarding:** Added profile-driven SSH agent forwarding support for remote sessions.
+- **README Internals:** Added a full "Under The Hood" section documenting runtime architecture, data flow, updater behavior, and release pipeline.
+
+### Changed
+- **Repository Defaults:** Updated installer and updater default repository references to `bonheur15/zet-ssh`.
+
 ## v0.1.1
 
 ### Initialized

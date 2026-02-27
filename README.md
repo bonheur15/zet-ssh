@@ -5,6 +5,7 @@ A modern keyboard-driven SSH workspace in your terminal: profiles, secure auth, 
 ## Features
 
 - Profile manager with create/edit and `~/.ssh/config` import
+- Per-profile SSH agent forwarding toggle
 - Secure SSH host key verification via `known_hosts`
 - Multi-session SSH tabs with quick switching
 - Dual-pane file browser (local + remote)
