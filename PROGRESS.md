@@ -30,3 +30,9 @@
 - [x] File Open/Preview in Pane Mode
 - [x] Profile Editing + Improved Save Validation
 - [x] Multi-Session Tabs and Switching
+- [x] Strict host-key verification using known_hosts
+- [x] Recursive directory upload/download in file mode
+- [x] Profile auth type + key path fields
+- [x] Import profiles from `~/.ssh/config`
+- [x] CLI updater (`zet update`) + auto-update env toggle
+- [x] GitHub Actions CI + multi-OS release artifacts

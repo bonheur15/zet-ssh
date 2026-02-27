@@ -32,11 +32,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **File Preview:** Added `o` action to open and preview local or remote files in pane mode.
 - **Session Tabs:** Added support for multiple simultaneous SSH sessions with tab switching.
 - **Dashboard Editing:** Added profile editing flow (`e`) and improved form validation/save behavior.
+- **Recursive Transfers:** Added recursive directory upload/download in file mode with progress + cancel support.
+- **SSH Config Import:** Added dashboard import action (`i`) to load explicit hosts from `~/.ssh/config`.
+- **Profile Auth Fields:** Added profile form inputs for `auth_type` and `key_path`.
+- **CLI Updater:** Added `zet update`, `zet update --check`, and `zet version`.
+- **Auto Update:** Added startup auto-update support via `ZET_SSH_AUTO_UPDATE=1`.
+- **Install Script:** Added one-line install script at `scripts/install.sh` (OS/arch-aware release fetch).
+- **GitHub Actions:** Added CI and tag-based multi-OS release packaging workflows.
 
 ### Changed
 - **File Browser State:** Extended browser component with parent navigation, active pane highlighting, and stable path handling.
 - **SFTP Core:** Upload/download now create missing parent directories where needed.
 - **Profile Store:** Added upsert/update behavior for editing persisted profiles.
+- **Auth Method Selection:** Session auth method order now respects profile `auth_type`.
 
 ### Fixed
 - **SSH Auth Failure:** Session connect now builds real auth methods (agent, key files, optional env password) instead of trying with an empty auth list.
@@ -46,3 +54,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Auth Order:** Connection attempts now always try private keys first (profile key + discovered `~/.ssh/id_*` keys + agent), then password fallback.
 - **Profile Form Save Flow:** Fixed save reliability and added explicit separate actions for save-only vs save-and-connect in both create and edit forms.
 - **Profile Save Dispatch:** Fixed a dashboard message-order bug where save messages were dropped after form close, causing Ctrl+S/Ctrl+G to appear non-functional.
+- **Host Key Security:** Replaced insecure host-key callback with strict `known_hosts` verification.

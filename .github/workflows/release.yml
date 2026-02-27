@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run tests
+        run: go test ./...
+      - name: Build archive
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          VERSION: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          DATE: ${{ github.run_id }}
+        run: |
+          set -eux
+          mkdir -p dist
+          ext=""
+          if [ "$GOOS" = "windows" ]; then
+            ext=".exe"
+          fi
+          out="dist/zet${ext}"
+          go build -trimpath -ldflags "-s -w -X zet-ssh/internal/update.Version=${VERSION} -X zet-ssh/internal/update.Commit=${COMMIT} -X zet-ssh/internal/update.Date=${DATE}" -o "$out" ./cmd/zet
+          archive="dist/zet-${GOOS}-${GOARCH}.tar.gz"
+          tar -C dist -czf "$archive" "zet${ext}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zet-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: dist/zet-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Collect artifacts
+        run: |
+          mkdir -p upload
+          find dist -type f -name '*.tar.gz' -exec cp {} upload/ \;
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: upload/*.tar.gz
