@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"zet-ssh/internal/core/profiles"
 	coreSFTP "zet-ssh/internal/core/sftp"
@@ -14,6 +15,7 @@ import (
 	"zet-ssh/internal/tui/components"
 	"zet-ssh/internal/tui/theme"
 
+	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -49,6 +51,35 @@ type filePreviewMsg struct {
 	err     error
 }
 
+type tunnelStatusMsg struct {
+	status string
+	err    error
+}
+
+type tunnelItem struct {
+	runtime *ssh.TunnelRuntime
+}
+
+func (i tunnelItem) Title() string {
+	status := "RED"
+	if i.runtime.Running() {
+		status = "GREEN"
+	}
+	return fmt.Sprintf("[%s] %s (%s)", status, i.runtime.Spec.Name, i.runtime.Spec.Type)
+}
+
+func (i tunnelItem) Description() string {
+	lastErr := i.runtime.LastError()
+	if lastErr == "" {
+		lastErr = "healthy"
+	}
+	return fmt.Sprintf("%s -> %s | %s", i.runtime.Addr(), i.runtime.Destination(), lastErr)
+}
+
+func (i tunnelItem) FilterValue() string {
+	return i.runtime.Spec.Name + " " + i.runtime.Addr() + " " + i.runtime.Destination()
+}
+
 type Model struct {
 	profile        profiles.Profile
 	viewport       viewport.Model
@@ -82,6 +113,18 @@ type Model struct {
 	passwordPromptOpen bool
 	passwordInput      textinput.Model
 	runtimePassword    string
+
+	tunnelMode      bool
+	tunnelList      list.Model
+	tunnels         []*ssh.TunnelRuntime
+	tunnelFormOpen  bool
+	tunnelFormFocus int
+	tunnelName      textinput.Model
+	tunnelType      textinput.Model
+	tunnelHost      textinput.Model
+	tunnelPort      textinput.Model
+	tunnelDestHost  textinput.Model
+	tunnelDestPort  textinput.Model
 }
 
 func New(p profiles.Profile, width, height int) Model {
@@ -114,6 +157,27 @@ func New(p profiles.Profile, width, height int) Model {
 	passInput.EchoMode = textinput.EchoPassword
 	passInput.EchoCharacter = '*'
 
+	tList := list.New([]list.Item{}, list.NewDefaultDelegate(), max(40, width-8), max(10, height-10))
+	tList.Title = "Tunnel Builder"
+	tList.SetShowHelp(false)
+
+	tName := textinput.New()
+	tName.Placeholder = "Name (e.g. DB Tunnel)"
+	tName.Focus()
+	tType := textinput.New()
+	tType.Placeholder = "Type: L | R | D"
+	tType.SetValue("L")
+	tHost := textinput.New()
+	tHost.Placeholder = "Listen Host"
+	tHost.SetValue("127.0.0.1")
+	tPort := textinput.New()
+	tPort.Placeholder = "Listen Port"
+	tDestHost := textinput.New()
+	tDestHost.Placeholder = "Destination Host (skip for D)"
+	tDestHost.SetValue("127.0.0.1")
+	tDestPort := textinput.New()
+	tDestPort.Placeholder = "Destination Port (skip for D)"
+
 	return Model{
 		profile:          p,
 		viewport:         vp,
@@ -124,6 +188,13 @@ func New(p profiles.Profile, width, height int) Model {
 		remoteBrowser:    remote,
 		transferProgress: pb,
 		passwordInput:    passInput,
+		tunnelList:       tList,
+		tunnelName:       tName,
+		tunnelType:       tType,
+		tunnelHost:       tHost,
+		tunnelPort:       tPort,
+		tunnelDestHost:   tDestHost,
+		tunnelDestPort:   tDestPort,
 	}
 }
 
@@ -284,6 +355,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.previewOpen = true
 		return m, nil
 
+	case tunnelStatusMsg:
+		if msg.err != nil {
+			m.status = "Tunnel error: " + msg.err.Error()
+		} else if strings.TrimSpace(msg.status) != "" {
+			m.status = msg.status
+		}
+		m.refreshTunnelList()
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -324,6 +404,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.fileMode {
 			return m.handleFileModeKey(msg)
 		}
+		if m.tunnelMode {
+			return m.handleTunnelModeKey(msg)
+		}
 
 		switch msg.String() {
 		case "ctrl+c":
@@ -340,6 +423,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status = "File mode: Tab switches pane, Enter opens directory, c copies, o opens file"
 			}
 			return m, nil
+		case "ctrl+t":
+			m.tunnelMode = true
+			m.status = "Tunnel mode: a add, space toggle, d delete, esc close"
+			m.refreshTunnelList()
+			return m, nil
 		}
 
 		if m.sshSession != nil {
@@ -349,7 +437,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	if !m.fileMode {
+	if !m.fileMode && !m.tunnelMode {
 		m.viewport, cmd = m.viewport.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -368,6 +456,9 @@ func (m Model) View() string {
 		if m.transferInProgress {
 			main = lipgloss.JoinVertical(lipgloss.Left, main, m.transferView())
 		}
+	}
+	if m.tunnelMode {
+		main = m.renderTunnelPanel()
 	}
 
 	if m.previewOpen {
@@ -406,6 +497,10 @@ func (m Model) View() string {
 	hints := "[Esc/q] Dashboard  [Ctrl+C] Send SIGINT  [Ctrl+F] Toggle File Mode"
 	if m.fileMode {
 		hints = "[Tab] Switch pane  [Enter] Open dir  [Backspace] Up  [c] Copy  [o] Open  [x] Cancel transfer  [r] Refresh  [Ctrl+F] Back"
+	} else if m.tunnelMode {
+		hints = "[a] Add  [space] Start/Stop  [d] Delete  [Esc/Ctrl+T] Back"
+	} else {
+		hints = "[Esc/q] Dashboard  [Ctrl+C] Send SIGINT  [Ctrl+F] File Mode  [Ctrl+T] Tunnels"
 	}
 	footer := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.NewStyle().Foreground(theme.Inactive).Render(hints),
@@ -420,6 +515,9 @@ func (m Model) View() string {
 }
 
 func (m Model) Close() {
+	for _, t := range m.tunnels {
+		_ = t.Stop()
+	}
 	if m.transferCancel != nil {
 		close(m.transferCancel)
 	}
@@ -436,6 +534,7 @@ func (m *Model) resizePanes() {
 	paneH := max(5, m.height-8)
 	m.localBrowser.SetSize(paneW, paneH)
 	m.remoteBrowser.SetSize(paneW, paneH)
+	m.tunnelList.SetSize(max(40, m.width-8), max(10, m.height-10))
 }
 
 func (m Model) handleFileModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -508,6 +607,86 @@ func (m Model) handleFileModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	} else {
 		m.remoteBrowser, cmd = m.remoteBrowser.Update(msg)
 	}
+	return m, cmd
+}
+
+func (m Model) handleTunnelModeKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.tunnelFormOpen {
+		switch msg.String() {
+		case "esc":
+			m.tunnelFormOpen = false
+			return m, nil
+		case "tab", "shift+tab", "up", "down":
+			if msg.String() == "shift+tab" || msg.String() == "up" {
+				m.tunnelFormFocus--
+			} else {
+				m.tunnelFormFocus++
+			}
+			if m.tunnelFormFocus < 0 {
+				m.tunnelFormFocus = 5
+			}
+			if m.tunnelFormFocus > 5 {
+				m.tunnelFormFocus = 0
+			}
+			m.focusTunnelForm()
+			return m, nil
+		case "enter":
+			if m.tunnelFormFocus == 5 {
+				rt, err := m.buildTunnelFromForm()
+				if err != nil {
+					m.status = "Tunnel create failed: " + err.Error()
+					return m, nil
+				}
+				m.tunnels = append(m.tunnels, rt)
+				m.tunnelFormOpen = false
+				m.refreshTunnelList()
+				m.status = "Tunnel added"
+				return m, nil
+			}
+			m.tunnelFormFocus++
+			if m.tunnelFormFocus > 5 {
+				m.tunnelFormFocus = 5
+			}
+			m.focusTunnelForm()
+			return m, nil
+		}
+
+		var cmd tea.Cmd
+		switch m.tunnelFormFocus {
+		case 0:
+			m.tunnelName, cmd = m.tunnelName.Update(msg)
+		case 1:
+			m.tunnelType, cmd = m.tunnelType.Update(msg)
+		case 2:
+			m.tunnelHost, cmd = m.tunnelHost.Update(msg)
+		case 3:
+			m.tunnelPort, cmd = m.tunnelPort.Update(msg)
+		case 4:
+			m.tunnelDestHost, cmd = m.tunnelDestHost.Update(msg)
+		case 5:
+			m.tunnelDestPort, cmd = m.tunnelDestPort.Update(msg)
+		}
+		return m, cmd
+	}
+
+	switch msg.String() {
+	case "esc", "ctrl+t":
+		m.tunnelMode = false
+		m.status = "Terminal mode"
+		return m, nil
+	case "a":
+		m.resetTunnelForm()
+		m.tunnelFormOpen = true
+		m.focusTunnelForm()
+		return m, nil
+	case " ":
+		return m, m.toggleSelectedTunnel()
+	case "d":
+		return m, m.deleteSelectedTunnel()
+	}
+
+	var cmd tea.Cmd
+	m.tunnelList, cmd = m.tunnelList.Update(msg)
 	return m, cmd
 }
 
@@ -647,6 +826,157 @@ func (m Model) openSelectedFile() tea.Cmd {
 
 		return filePreviewMsg{title: remotePath, content: sanitizeTextPreview(string(data))}
 	}
+}
+
+func (m *Model) focusTunnelForm() {
+	m.tunnelName.Blur()
+	m.tunnelType.Blur()
+	m.tunnelHost.Blur()
+	m.tunnelPort.Blur()
+	m.tunnelDestHost.Blur()
+	m.tunnelDestPort.Blur()
+	switch m.tunnelFormFocus {
+	case 0:
+		m.tunnelName.Focus()
+	case 1:
+		m.tunnelType.Focus()
+	case 2:
+		m.tunnelHost.Focus()
+	case 3:
+		m.tunnelPort.Focus()
+	case 4:
+		m.tunnelDestHost.Focus()
+	case 5:
+		m.tunnelDestPort.Focus()
+	}
+}
+
+func (m *Model) resetTunnelForm() {
+	m.tunnelFormFocus = 0
+	m.tunnelName.SetValue("")
+	m.tunnelType.SetValue("L")
+	m.tunnelHost.SetValue("127.0.0.1")
+	m.tunnelPort.SetValue("")
+	m.tunnelDestHost.SetValue("127.0.0.1")
+	m.tunnelDestPort.SetValue("")
+}
+
+func (m Model) buildTunnelFromForm() (*ssh.TunnelRuntime, error) {
+	tType := strings.ToUpper(strings.TrimSpace(m.tunnelType.Value()))
+	var tunnelType ssh.TunnelType
+	switch tType {
+	case "L":
+		tunnelType = ssh.TunnelLocal
+	case "R":
+		tunnelType = ssh.TunnelRemote
+	case "D":
+		tunnelType = ssh.TunnelDynamic
+	default:
+		return nil, fmt.Errorf("type must be L, R, or D")
+	}
+
+	listenPort, err := strconv.Atoi(strings.TrimSpace(m.tunnelPort.Value()))
+	if err != nil || listenPort < 1 || listenPort > 65535 {
+		return nil, fmt.Errorf("listen port must be in range 1..65535")
+	}
+
+	name := strings.TrimSpace(m.tunnelName.Value())
+	if name == "" {
+		name = fmt.Sprintf("%s-%d", tType, listenPort)
+	}
+
+	spec := ssh.TunnelSpec{
+		Name:       name,
+		Type:       tunnelType,
+		ListenHost: strings.TrimSpace(m.tunnelHost.Value()),
+		ListenPort: listenPort,
+	}
+	if spec.ListenHost == "" {
+		spec.ListenHost = "127.0.0.1"
+	}
+
+	if tunnelType != ssh.TunnelDynamic {
+		spec.DestHost = strings.TrimSpace(m.tunnelDestHost.Value())
+		if spec.DestHost == "" {
+			return nil, fmt.Errorf("destination host is required")
+		}
+		destPort, convErr := strconv.Atoi(strings.TrimSpace(m.tunnelDestPort.Value()))
+		if convErr != nil || destPort < 1 || destPort > 65535 {
+			return nil, fmt.Errorf("destination port must be in range 1..65535")
+		}
+		spec.DestPort = destPort
+	}
+
+	return ssh.NewTunnelRuntime(spec), nil
+}
+
+func (m *Model) refreshTunnelList() {
+	items := make([]list.Item, 0, len(m.tunnels))
+	for _, t := range m.tunnels {
+		items = append(items, tunnelItem{runtime: t})
+	}
+	m.tunnelList.SetItems(items)
+}
+
+func (m *Model) toggleSelectedTunnel() tea.Cmd {
+	return func() tea.Msg {
+		idx := m.tunnelList.Index()
+		if idx < 0 || idx >= len(m.tunnels) {
+			return tunnelStatusMsg{status: "No tunnel selected"}
+		}
+		rt := m.tunnels[idx]
+		if rt.Running() {
+			if err := rt.Stop(); err != nil {
+				return tunnelStatusMsg{err: err}
+			}
+			return tunnelStatusMsg{status: "Tunnel stopped"}
+		}
+		if m.sshSession == nil {
+			return tunnelStatusMsg{err: fmt.Errorf("ssh session not ready")}
+		}
+		if err := rt.Start(m.sshSession.Client()); err != nil {
+			return tunnelStatusMsg{err: err}
+		}
+		return tunnelStatusMsg{status: "Tunnel started"}
+	}
+}
+
+func (m *Model) deleteSelectedTunnel() tea.Cmd {
+	idx := m.tunnelList.Index()
+	if idx < 0 || idx >= len(m.tunnels) {
+		return nil
+	}
+	_ = m.tunnels[idx].Stop()
+	m.tunnels = append(m.tunnels[:idx], m.tunnels[idx+1:]...)
+	m.refreshTunnelList()
+	m.status = "Tunnel deleted"
+	return nil
+}
+
+func (m Model) renderTunnelPanel() string {
+	listView := m.tunnelList.View()
+	if m.tunnelFormOpen {
+		form := lipgloss.NewStyle().
+			BorderStyle(lipgloss.RoundedBorder()).
+			BorderForeground(theme.Accent).
+			Padding(1).
+			Render(lipgloss.JoinVertical(lipgloss.Left,
+				theme.Header.Render("New Tunnel"),
+				m.tunnelName.View(),
+				m.tunnelType.View(),
+				m.tunnelHost.View(),
+				m.tunnelPort.View(),
+				m.tunnelDestHost.View(),
+				m.tunnelDestPort.View(),
+				lipgloss.NewStyle().Foreground(theme.Inactive).Render("[Enter] next/save  [Tab] focus  [Esc] cancel"),
+			))
+		listView = lipgloss.JoinVertical(lipgloss.Left, listView, "", form)
+	}
+	return lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(theme.Primary).
+		Padding(1).
+		Render(listView)
 }
 
 func (m Model) transferView() string {
