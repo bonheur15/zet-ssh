@@ -12,18 +12,18 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <style>
             :root {
-                --bg: #080b0f;
-                --surface: #0d1117;
-                --surface2: #111820;
-                --border: #1e2a38;
-                --green: #22c55e;
-                --green-dim: #166534;
-                --cyan: #06b6d4;
-                --amber: #f59e0b;
-                --red: #ef4444;
-                --text: #e2e8f0;
-                --muted: #64748b;
-                --accent: #22c55e;
+                --bg: #f6f8fa;
+                --surface: #ffffff;
+                --surface2: #f1f5f9;
+                --border: #d5e0ea;
+                --green: #0f8a6f;
+                --green-dim: #0b6a55;
+                --cyan: #0ea5c6;
+                --amber: #d97706;
+                --red: #dc2626;
+                --text: #15232b;
+                --muted: #5b6d7a;
+                --accent: #0f8a6f;
             }
 
             * {
@@ -51,7 +51,7 @@
                 background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
                 pointer-events: none;
                 z-index: 100;
-                opacity: 0.4;
+                opacity: 0.12;
             }
 
             mono {
@@ -90,7 +90,7 @@
                 backdrop-filter: blur(0px);
             }
             nav.scrolled {
-                background: rgba(8, 11, 15, 0.9);
+                background: rgba(246, 248, 250, 0.9);
                 border-color: var(--border);
                 backdrop-filter: blur(20px);
             }
@@ -130,9 +130,12 @@
                 display: grid;
                 grid-template-columns: 1fr 1fr;
                 gap: 0;
-                padding: 0;
+                padding: 92px 0 40px;
                 position: relative;
                 overflow: hidden;
+                max-width: 1400px;
+                margin: 0 auto;
+                align-items: center;
             }
 
             /* Grid lines background */
@@ -158,7 +161,7 @@
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                padding: 120px 48px 80px 80px;
+                padding: 40px 40px 40px 56px;
                 position: relative;
                 z-index: 1;
             }
@@ -192,6 +195,19 @@
             .hero-title em {
                 font-style: italic;
                 color: var(--green);
+                display: inline-block;
+                animation: accentPulse 2.6s ease-in-out infinite;
+            }
+            @keyframes accentPulse {
+                0%,
+                100% {
+                    transform: translateY(0);
+                    text-shadow: 0 0 0 rgba(15, 138, 111, 0);
+                }
+                50% {
+                    transform: translateY(-2px);
+                    text-shadow: 0 8px 20px rgba(15, 138, 111, 0.2);
+                }
             }
 
             .hero-desc {
@@ -278,7 +294,7 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                padding: 120px 80px 80px 24px;
+                padding: 40px 56px 40px 24px;
                 position: relative;
                 z-index: 1;
             }
@@ -365,7 +381,7 @@
             .term-sidebar {
                 border-right: 1px solid var(--border);
                 padding: 12px 0;
-                background: rgba(0, 0, 0, 0.2);
+                background: rgba(15, 138, 111, 0.04);
             }
             .sidebar-header {
                 font-family: "JetBrains Mono", monospace;
@@ -472,13 +488,40 @@
 
             .term-statusbar {
                 background: var(--green);
-                color: #000;
+                color: #fff;
                 font-family: "JetBrains Mono", monospace;
                 font-size: 11px;
                 padding: 4px 14px;
                 display: flex;
                 justify-content: space-between;
                 font-weight: 500;
+            }
+
+            .hero-scroll {
+                margin-top: 18px;
+                font-family: "JetBrains Mono", monospace;
+                font-size: 11px;
+                color: var(--muted);
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .hero-scroll span {
+                color: var(--green);
+                animation: scrollHint 1.4s ease-in-out infinite;
+            }
+            @keyframes scrollHint {
+                0%,
+                100% {
+                    transform: translateY(0);
+                    opacity: 0.7;
+                }
+                50% {
+                    transform: translateY(4px);
+                    opacity: 1;
+                }
             }
 
             /* Animated typing lines */
@@ -904,15 +947,36 @@
             }
 
             /* Responsive */
+            @media (max-width: 1200px) {
+                .hero-left {
+                    padding-left: 36px;
+                }
+                .hero-right {
+                    padding-right: 36px;
+                }
+            }
+
             @media (max-width: 900px) {
                 .hero {
                     grid-template-columns: 1fr;
+                    min-height: auto;
+                    padding-top: 82px;
                 }
                 .hero-right {
-                    display: none;
+                    display: flex;
+                    padding: 12px 32px 0;
                 }
                 .hero-left {
-                    padding: 100px 32px 60px;
+                    padding: 20px 32px 24px;
+                    text-align: center;
+                    align-items: center;
+                }
+                .hero-desc {
+                    max-width: 560px;
+                }
+                .install-box {
+                    width: 100%;
+                    max-width: 640px;
                 }
                 .section,
                 .keys-section,
@@ -942,6 +1006,42 @@
                 }
                 nav {
                     padding: 18px 24px;
+                }
+                .nav-links {
+                    gap: 16px;
+                }
+            }
+
+            @media (max-width: 640px) {
+                nav {
+                    padding: 14px;
+                }
+                .nav-links a:nth-child(2),
+                .nav-links a:nth-child(3) {
+                    display: none;
+                }
+                .hero-title {
+                    font-size: clamp(40px, 12vw, 56px);
+                }
+                .hero-desc {
+                    font-size: 14px;
+                }
+                .hero-meta {
+                    gap: 14px;
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+                .hero-right {
+                    padding: 8px 14px 0;
+                }
+                .term-layout {
+                    grid-template-columns: 1fr;
+                }
+                .term-sidebar {
+                    display: none;
+                }
+                .terminal-window {
+                    border-radius: 10px;
                 }
             }
 
@@ -1018,14 +1118,13 @@
                     Open Source · MIT License · Written in Go
                 </div>
                 <h1 class="hero-title">
-                    SSH workspaces<br />
-                    that <em>stay</em><br />
-                    in the terminal.
+                    Manage SSH<br />
+                    with <em>less hassle</em><br />
+                    every day.
                 </h1>
                 <p class="hero-desc">
-                    Profiles, encrypted vault, tabs, file browser, tunnels —
-                    everything you need to manage servers, all keyboard-driven
-                    and beautiful. No GUI required.
+                    Profiles, tunnels, transfers, and secure sessions in one
+                    simple terminal workflow.
                 </p>
 
                 <div class="install-box">
@@ -1093,6 +1192,7 @@
                         Community
                     </a>
                 </div>
+                <a class="hero-scroll" href="#features">scroll <span>↓</span></a>
             </div>
 
             <div class="hero-right">
