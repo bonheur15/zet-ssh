@@ -811,6 +811,18 @@
             .repo-tree span {
                 display: block;
             }
+            .tree-l0 {
+                padding-left: 0;
+            }
+            .tree-l1 {
+                padding-left: 16px;
+            }
+            .tree-l2 {
+                padding-left: 32px;
+            }
+            .tree-l3 {
+                padding-left: 48px;
+            }
             .tree-dir {
                 color: var(--cyan);
             }
@@ -2016,29 +2028,30 @@
                     </h2>
 
                     <div class="repo-tree">
-                        <span class="tree-dir">zet-ssh/</span>
-                        <span class="tree-dir">cmd/zet/</span>
-                        <span class="tree-comment"># CLI entry point</span>
-                        <span class="tree-dir">internal/</span>
-                        <span class="tree-dir">tui/</span>
-                        <span class="tree-comment"># Bubble Tea models</span>
-                        <span class="tree-dir">components/</span>
-                        <span class="tree-comment"># Reusable widgets</span>
-                        <span class="tree-dir">pages/</span>
-                        <span class="tree-comment"># Full-screen views</span>
-                        <span class="tree-dir">core/</span>
-                        <span class="tree-dir">vault/</span>
-                        <span class="tree-comment"># Encryption logic</span>
-                        <span class="tree-dir">profiles/</span>
-                        <span class="tree-comment"># Profile manager</span>
-                        <span class="tree-dir">ssh/</span>
-                        <span class="tree-comment"># SSH engine</span>
-                        <span class="tree-dir">sftp/</span>
-                        <span class="tree-comment"># File transfers</span>
-                        <span class="tree-file">go.mod</span>
-                        <span class="tree-file">README.md</span>
-                        <span class="tree-file">LICENSE</span>
-                        <span class="tree-comment"># MIT</span>
+                        <span class="tree-dir tree-l0">zet-ssh/</span>
+                        <span class="tree-dir tree-l1">cmd/</span>
+                        <span class="tree-dir tree-l2">zet/</span>
+                        <span class="tree-comment tree-l3"># CLI entry point</span>
+                        <span class="tree-dir tree-l1">internal/</span>
+                        <span class="tree-dir tree-l2">tui/</span>
+                        <span class="tree-comment tree-l3"># Bubble Tea models</span>
+                        <span class="tree-dir tree-l3">components/</span>
+                        <span class="tree-comment tree-l3"># Reusable widgets</span>
+                        <span class="tree-dir tree-l3">pages/</span>
+                        <span class="tree-comment tree-l3"># Full-screen views</span>
+                        <span class="tree-dir tree-l2">core/</span>
+                        <span class="tree-dir tree-l3">vault/</span>
+                        <span class="tree-comment tree-l3"># Encryption logic</span>
+                        <span class="tree-dir tree-l3">profiles/</span>
+                        <span class="tree-comment tree-l3"># Profile manager</span>
+                        <span class="tree-dir tree-l3">ssh/</span>
+                        <span class="tree-comment tree-l3"># SSH engine</span>
+                        <span class="tree-dir tree-l3">sftp/</span>
+                        <span class="tree-comment tree-l3"># File transfers</span>
+                        <span class="tree-file tree-l1">go.mod</span>
+                        <span class="tree-file tree-l1">README.md</span>
+                        <span class="tree-file tree-l1">LICENSE</span>
+                        <span class="tree-comment tree-l1"># MIT</span>
                     </div>
 
                     <div
@@ -2132,6 +2145,36 @@
                         >zet connect &lt;name&gt;</code
                     >
                     to jump directly.
+                </div>
+            </div>
+        </section>
+
+        <section class="keys-section" id="build-source" style="padding-top: 0">
+            <div class="reveal">
+                <div class="section-label">Build from Source</div>
+                <h2 class="section-title" style="font-size: 34px">
+                    Build locally<br /><em>in minutes</em>.
+                </h2>
+                <p
+                    style="
+                        color: var(--muted);
+                        font-size: 15px;
+                        line-height: 1.72;
+                        margin-top: 12px;
+                        font-weight: 300;
+                        max-width: 620px;
+                    "
+                >
+                    Clone, build, then run. You only need Go installed.
+                </p>
+
+                <div class="repo-tree" style="margin-top: 22px; max-width: 860px">
+                    <span class="tree-file tree-l0">git clone https://github.com/bonheur15/zet-ssh.git</span>
+                    <span class="tree-file tree-l0">cd zet-ssh</span>
+                    <span class="tree-file tree-l0">go build -o zet ./cmd/zet</span>
+                    <span class="tree-file tree-l0">./zet</span>
+                    <span class="tree-comment tree-l0"># optional: ./zet connect &lt;name&gt;</span>
+                    <span class="tree-comment tree-l0"># optional: ./zet run &lt;name&gt; -- &lt;command&gt;</span>
                 </div>
             </div>
         </section>
